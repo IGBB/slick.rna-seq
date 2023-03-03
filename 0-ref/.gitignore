@@ -1,0 +1,14 @@
+README.md
+ncbi_dataset/data/assembly_data_report.jsonl
+ncbi_dataset/data/GCF_002263795.2/GCF_002263795.2_ARS-UCD1.3_genomic.fna
+ncbi_dataset/data/GCF_002263795.2/genomic.gff
+ncbi_dataset/data/GCF_002263795.2/rna.fna
+ncbi_dataset/data/GCF_002263795.2/cds_from_genomic.fna
+ncbi_dataset/data/GCF_002263795.2/protein.faa
+ncbi_dataset/data/GCF_002263795.2/sequence_report.jsonl
+ncbi_dataset/data/dataset_catalog.json
+bovine.db
+bovine.db.fa
+decoys.txt
+download.sh
+index.sh

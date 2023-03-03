@@ -1,0 +1,32 @@
+#+title:
+#+options: toc:nil ^:{}
+
+* Methods
+
+To quantify the transcript level expression, raw reads were aligned using salmon
+[v1.9.0][cite:@patro2017] to the /Bos taurus/ (ARS-UCD1.3,[cite:@bovine2009])
+RefSeq transcripts with the genome used as decoys. The transcript expression was
+converted to gene-level expression using the R package tximport [v1.26.1]
+[cite:@soneson2016] using the edgeR scaling methods provided in the
+documentation. Genes with very low expression (fewer than 10 reads found in more
+than seven samples) were removed [cite:@bourgon2010]. The likelihood ratio
+method in edgeR [v3.40.2][cite:@mccarthy2012] was used to test for significant
+differential expression. The fry method from edgeR was used to do gene set
+enrichment analysis (GSEA) for Kyoto Encyclopedia of Genes and Genomes (KEGG)
+pathways and Gene Ontology (GO) terms. All code used for DE and GSEA can be
+found in XXX.
+
+* Results
+
+The 17 samples were sequenced to an average depth of 31.4 M reads (ranging from
+29.4M in WT_2273 to 40.4M in WT_2226). Salmon mapped the raw reads to the bovine
+transcriptome with an average rate of 87.62% (81.12% in SLICK_2171 to 90.13% in
+SLICK_2287). The 76,278 reference transcript-level expressions for each sample
+were reduced to 20,946 gene-level expressions. Of these, 13,392 passed the low
+expression filter. A single gene (GeneID:513329, major allergen Equ c 1) showed
+significant (B.H. adjusted p-value <= 0.05) differential expression. Both the
+KEGG pathway and GO term GSEA showed no statistically significance enrichment at
+B.H. adjusted p-value <= 0.05.
+
+* References
+#+print_bibliography:
