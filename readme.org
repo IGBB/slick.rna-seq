@@ -125,7 +125,7 @@ awk '/^Observed/ {obs=$2}
 
 * EdgeR
 ** Load data
-#+begin_src R :session bovine
+#+begin_src R :session bovine :results output
 library(edgeR)
 library(statmod)
 library(tximport)
@@ -165,7 +165,7 @@ txi <- tximport(files, type = "salmon", tx2gene = tx2gene)
   #+RESULTS:
 
 ** Normalize counts, Filter Genes, and Estimate Dispersions
-#+begin_src R :session bovine
+#+begin_src R :session bovine :results output
 cts <- txi$counts
 normMat <- txi$length
 
@@ -193,10 +193,96 @@ y <- d[keep, ,keep.lib.sizes=F ] %>%
   calcNormFactors %>%
   estimateDisp(design, robust=T)
 
+
+
 #+end_src
 
 #+RESULTS:
+: Warning message:
+: In calcNormFactors.DGEList(.) :
+:   object contains offsets, which take precedence over library
+: sizes and norm factors (and which will not be recomputed).
 
+
+- unique genes
+
+  #+begin_src R :session bovine :colnames '("GeneID" "Type" "Samples")
+as.data.frame(txi$counts) %>%
+  rownames_to_column('GeneID') %>%
+gather(-GeneID, key="library", value="count") %>%
+  left_join(meta.data) %>%
+  filter(count > 0) %>%
+  group_by(GeneID, group) %>%
+  count %>%
+  spread(group, n) %>%
+  filter(is.na(WT) | is.na(SL)) %>%
+  gather(-GeneID, key="Type", value="Samples") %>%
+  filter(Samples >= 4)
+
+  #+end_src
+
+  #+RESULTS:
+  |    GeneID | Type | Samples |
+  |-----------+------+---------|
+  | 112441545 | WT   |       6 |
+  | 112447300 | WT   |       5 |
+  |    505979 | WT   |       4 |
+  |    505993 | WT   |       4 |
+  |    523830 | WT   |       4 |
+  |    535831 | WT   |       4 |
+  |    615310 | WT   |       4 |
+  |    786611 | WT   |       5 |
+  | 101905578 | SL   |       4 |
+  | 101906363 | SL   |       4 |
+  | 104968609 | SL   |       5 |
+  | 112449108 | SL   |       4 |
+  |    512850 | SL   |       4 |
+  |    516736 | SL   |       5 |
+  |    524709 | SL   |       4 |
+  |    526745 | SL   |       4 |
+  |    540297 | SL   |       4 |
+  |    613925 | SL   |       5 |
+  |    783189 | SL   |       4 |
+  |    790886 | SL   |       4 |
+
+- Unique Gene Venn Diagram
+  #+header: :results output file graphics :file venn.png
+  #+header: :width 4 :height 4 :units in :res 600
+  #+begin_src R :session bovine
+unique.gene.venn.plot <- as.data.frame(txi$counts) %>%
+  rownames_to_column('gene') %>%
+gather(-gene, key="library", value="count") %>%
+  left_join(meta.data) %>%
+  filter(count > 0) %>%
+  group_by(gene, group) %>%
+  count %>%
+  spread(group, n) %>%
+  filter(is.na(WT) | is.na(SL)) %>%
+  gather(-gene, key="type", value="count") %>%
+  filter(!is.na(count)) %>%
+  arrange(count) %>%
+  mutate(type=fct_rev(type)) %>%
+  ggplot(aes(type,1,fill=count)) +
+  geom_col() +
+  scale_x_discrete(breaks=c("WT", "SL"), labels=c("Wild-Type", "SLICK")) +
+  scale_y_continuous(expand=c(0,0)) +
+  scale_fill_distiller(palette = "PuRd") +
+  guides(fill=guide_colorbar(title="Number of \nSamples")) +
+  labs(y="Number of unique genes", x="Hair Coat Type") +
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_text(size=14),,
+    axis.title = element_text(size=16),
+    legend.text = element_text(size=14),
+    legend.title = element_text(size=16)
+    )
+
+unique.gene.venn.plot
+  #+end_src
+
+  #+RESULTS:
+  [[file:venn.png]]
 
 - Filtered/Surviving gene summary
   #+begin_src R :session bovine
@@ -209,27 +295,47 @@ y <- d[keep, ,keep.lib.sizes=F ] %>%
 
 - MDS
   #+header: :results output file graphics :file MDS.png
-  #+header: :width 8 :height 4 :units in :res 600
+  #+header: :width 8 :height 6 :units in :res 600
   #+begin_src R :session bovine
 mds.data <- plotMDS(y, plot=F)
 
-cbind(meta.data, x=mds.data$x, y=mds.data$y) %>%
+mds.plot <- cbind(meta.data, x=mds.data$x, y=mds.data$y) %>%
   mutate(library = sub('.*_', '', library)) %>%
   ggplot(aes(x,y, color=group, label=library)) +
   geom_point() +
   geom_text_repel(show.legend = F) +
-  scale_color_brewer(type='qual', palette="Set1", labels=c("Wild Type", "Slick")) +
+  scale_color_manual(values=c( "#cc546e", "#4db598"), labels=c("Wild-Type", "SLICK")) +
   xlab(sprintf("Dimension 1 (%0.2f%%)", mds.data$var.explained[1]*100)) +
   ylab(sprintf("Dimension 2 (%0.2f%%)", mds.data$var.explained[2]*100)) +
-  labs(color="Variant") +
-  theme_minimal() +
+  labs(color="Hair Coat Type") +
+  theme_bw() +
   theme(legend.position = c(0.8,0.8),
-        legend.background = element_rect(fill='white'))
-
+        legend.background = element_rect(fill='white', color="grey"),
+        panel.grid = element_blank()) +
+    theme( legend.position = c(0.8,0.9),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size=14),,
+    axis.title = element_text(size=16),
+    legend.text = element_text(size=14),
+    legend.title = element_text(size=16)
+    )
+mds.plot
   #+end_src
 
   #+RESULTS:
   [[file:MDS.png]]
+
+- Panel MDS/Venn
+  #+header: :results output file graphics :file venn-MDS.png
+  #+header: :width 12 :height 6 :units in :res 300
+  #+begin_src R :session bovine
+library(cowplot)
+
+plot_grid(mds.plot, unique.gene.venn.plot, labels=c("A", "B"), rel_widths = c(3,2))
+  #+end_src
+
+  #+RESULTS:
+  [[file:venn-MDS.png]]
 
 - Mean-Difference (MD) plots
   #+header: :results output file graphics :file mean-diff.png
@@ -269,37 +375,15 @@ topTags(qlf, n=Inf) %>%
   filter(PValue <= 0.01 & abs(logFC) > 0.6) %>%
   tibble::rownames_to_column("GeneID") %>%
   left_join(desc, by="GeneID") %>%
-  ascii()
+  ascii(digits = 4 )
   #+end_src
 
   #+RESULTS:
   :results:
-  |    |    GeneID | logFC | logCPM |     F | PValue |  FDR | product                                                                               |
-  |----+-----------+-------+--------+-------+--------+------+---------------------------------------------------------------------------------------|
-  |  1 |    513329 |  2.29 |   1.25 | 38.08 |   0.00 | 0.16 | major allergen Equ c 1%2C transcript variant X2                                       |
-  |  2 |    511941 |  0.91 |   3.14 | 19.18 |   0.00 | 1.00 | carcinoembryonic antigen related cell adhesion molecule 19                            |
-  |  3 | 100139092 |  1.40 |   0.39 | 15.39 |   0.00 | 1.00 | G protein-coupled receptor 34%2C transcript variant X2                                |
-  |  4 |    783257 | -0.61 |   2.58 | 14.67 |   0.00 | 1.00 | ATP binding cassette subfamily B member 6                                             |
-  |  5 |    519145 |  1.57 |  -0.56 | 13.79 |   0.00 | 1.00 | beta-galactosidase-1-like protein 2%2C transcript variant X1                          |
-  |  6 | 100336825 |  0.95 |   0.96 | 13.44 |   0.00 | 1.00 | tubulin tyrosine ligase like 10%2C transcript variant X2                              |
-  |  7 |    280839 |  1.30 |   0.49 | 11.63 |   0.00 | 1.00 | luteinizing hormone beta polypeptide%2C transcript variant X1                         |
-  |  8 |    784038 | -5.48 |   5.03 | 11.60 |   0.00 | 1.00 | testis-specific H1 histone                                                            |
-  |  9 | 100336551 | -0.63 |   2.78 | 11.07 |   0.00 | 1.00 | ATP binding cassette subfamily C member 9%2C transcript variant X3                    |
-  | 10 |    539467 |  0.99 |   3.18 | 10.90 |   0.00 | 1.00 | protein kinase domain containing%2C cytoplasmic                                       |
-  | 11 |    788425 |  1.39 |  -0.25 | 10.44 |   0.01 | 1.00 | aflatoxin B1 aldehyde reductase member 4%2C transcript variant X2                     |
-  | 12 |    286858 |  1.24 |   8.38 |  9.69 |   0.01 | 1.00 | prostaglandin D2 synthase%2C transcript variant X2                                    |
-  | 13 |    534578 |  0.73 |   3.52 |  9.61 |   0.01 | 1.00 | vascular cell adhesion molecule 1-like                                                |
-  | 14 |    505551 |  1.25 |  -1.00 |  9.52 |   0.01 | 1.00 | MYCBP associated protein                                                              |
-  | 15 |    530346 |  1.29 |  -0.06 |  9.34 |   0.01 | 1.00 | zinc finger protein 621                                                               |
-  | 16 |    517459 | -2.90 |   2.11 |  9.48 |   0.01 | 1.00 | gamma-aminobutyric acid type A receptor pi subunit%2C transcript variant X2           |
-  | 17 |    767895 |  0.70 |   2.45 |  9.02 |   0.01 | 1.00 | WD repeat domain 60%2C transcript variant X4                                          |
-  | 18 |    539733 |  0.73 |   2.17 |  8.87 |   0.01 | 1.00 | RWD domain containing 2A%2C transcript variant X1                                     |
-  | 19 |    519940 | -1.59 |   1.51 |  8.79 |   0.01 | 1.00 | retinol dehydrogenase 16 (all-trans)%2C transcript variant X5                         |
-  | 20 |    319095 | -0.86 |   4.09 |  8.78 |   0.01 | 1.00 | ADCYAP receptor type I%2C transcript variant X5                                       |
-  | 21 | 100298265 |  1.64 |  -0.06 |  8.73 |   0.01 | 1.00 | C3 and PZP like%2C alpha-2-macroglobulin domain containing 8%2C transcript variant X1 |
-  | 22 |    523124 |  0.76 |   0.71 |  8.55 |   0.01 | 1.00 | pleckstrin and Sec7 domain containing%2C transcript variant X2                        |
-  | 23 |    515025 |  0.67 |   3.03 |  8.50 |   0.01 | 1.00 | bridging integrator 2                                                                 |
-  | 24 |    534512 |  1.15 |   1.01 |  8.47 |   0.01 | 1.00 | hemicentin 2%2C transcript variant X1                                                 |
+  [1m[33mError[39m in `auto_copy()`:[22m
+  [1m[22m[33m![39m `x` and `y` must share the same src.
+  [36mℹ[39m set `copy` = TRUE (may be slow).
+  [90mRun `]8;;rstudio:run:rlang::last_error()rlang::last_error()]8;;` to see where the error occurred.[39m
   :end:
 
 ** COMMENT DEG QL test (FC > 1.5)
@@ -337,7 +421,7 @@ fit <- glmFit(y,design,robust=T)
 lrt <- glmLRT(fit)
 
 desc <- txdb %>%
-  dplyr::select(GeneID, product) %>%
+  dplyr::select(GeneID, gene, product) %>%
   distinct(GeneID, .keep_all=T)
 
 topTags(lrt, n=Inf) %>%
@@ -345,71 +429,88 @@ topTags(lrt, n=Inf) %>%
   filter(PValue <= 0.01 & abs(logFC) > 0.6) %>%
   tibble::rownames_to_column("GeneID") %>%
   left_join(desc, by="GeneID")  %>%
-  ascii()
+  ascii(digits=4)
 
 #+end_src
 
 #+RESULTS:
 :results:
-|    | GeneID    | logFC | logCPM | LR    | PValue | FDR  | product                                                                               |
-|----+-----------+-------+--------+-------+--------+------+---------------------------------------------------------------------------------------|
-| 1  | 513329    | 2.28  | 1.25   | 36.08 | 0.00   | 0.00 | major allergen Equ c 1%2C transcript variant X2                                       |
-| 2  | 100139092 | 1.38  | 0.39   | 16.30 | 0.00   | 0.29 | G protein-coupled receptor 34%2C transcript variant X2                                |
-| 3  | 511941    | 0.90  | 3.14   | 15.96 | 0.00   | 0.29 | carcinoembryonic antigen related cell adhesion molecule 19                            |
-| 4  | 519145    | 1.56  | -0.56  | 13.83 | 0.00   | 0.67 | beta-galactosidase-1-like protein 2%2C transcript variant X1                          |
-| 5  | 100336825 | 0.96  | 0.96   | 11.58 | 0.00   | 1.00 | tubulin tyrosine ligase like 10%2C transcript variant X2                              |
-| 6  | 280839    | 1.30  | 0.49   | 10.98 | 0.00   | 1.00 | luteinizing hormone beta polypeptide%2C transcript variant X1                         |
-| 7  | 100298265 | 1.64  | -0.06  | 10.51 | 0.00   | 1.00 | C3 and PZP like%2C alpha-2-macroglobulin domain containing 8%2C transcript variant X1 |
-| 8  | 783257    | -0.61 | 2.58   | 10.43 | 0.00   | 1.00 | ATP binding cassette subfamily B member 6                                             |
-| 9  | 788425    | 1.37  | -0.25  | 10.36 | 0.00   | 1.00 | aflatoxin B1 aldehyde reductase member 4%2C transcript variant X2                     |
-| 10 | 505551    | 1.27  | -1.00  | 10.23 | 0.00   | 1.00 | MYCBP associated protein                                                              |
-| 11 | 539467    | 0.99  | 3.18   | 10.07 | 0.00   | 1.00 | protein kinase domain containing%2C cytoplasmic                                       |
-| 12 | 286858    | 1.24  | 8.38   | 9.72  | 0.00   | 1.00 | prostaglandin D2 synthase%2C transcript variant X2                                    |
-| 13 | 530346    | 1.28  | -0.06  | 9.52  | 0.00   | 1.00 | zinc finger protein 621                                                               |
-| 14 | 519940    | -1.59 | 1.51   | 8.78  | 0.00   | 1.00 | retinol dehydrogenase 16 (all-trans)%2C transcript variant X5                         |
-| 15 | 100336551 | -0.63 | 2.78   | 8.73  | 0.00   | 1.00 | ATP binding cassette subfamily C member 9%2C transcript variant X3                    |
-| 16 | 517459    | -2.94 | 2.11   | 8.65  | 0.00   | 1.00 | gamma-aminobutyric acid type A receptor pi subunit%2C transcript variant X2           |
-| 17 | 286791    | -1.93 | 1.76   | 8.57  | 0.00   | 1.00 | major allergen BDA20%2C transcript variant X1                                         |
-| 18 | 784038    | -5.45 | 5.03   | 8.53  | 0.00   | 1.00 | testis-specific H1 histone                                                            |
-| 19 | 518047    | -1.90 | -0.28  | 8.48  | 0.00   | 1.00 | solute carrier organic anion transporter family member 1C1%2C transcript variant X2   |
-| 20 | 534578    | 0.73  | 3.52   | 8.46  | 0.00   | 1.00 | vascular cell adhesion molecule 1-like                                                |
-| 21 | 319095    | -0.86 | 4.09   | 8.38  | 0.00   | 1.00 | ADCYAP receptor type I%2C transcript variant X5                                       |
-| 22 | 524115    | 1.05  | -0.32  | 7.99  | 0.00   | 1.00 | gamma-aminobutyric acid type A receptor epsilon subunit                               |
-| 23 | 534512    | 1.15  | 1.01   | 7.87  | 0.01   | 1.00 | hemicentin 2%2C transcript variant X1                                                 |
-| 24 | 404129    | 1.47  | -0.64  | 7.79  | 0.01   | 1.00 | diacylglycerol O-acyltransferase 2                                                    |
-| 25 | 100295741 | 1.38  | 4.17   | 7.70  | 0.01   | 1.00 | zymogen granule protein 16B                                                           |
-| 26 | 767895    | 0.70  | 2.45   | 7.65  | 0.01   | 1.00 | WD repeat domain 60%2C transcript variant X4                                          |
-| 27 | 534505    | -1.83 | 1.72   | 7.65  | 0.01   | 1.00 | carboxypeptidase X%2C M14 family member 2                                             |
-| 28 | 785756    | -2.56 | 3.65   | 7.55  | 0.01   | 1.00 | androgen binding protein beta-like                                                    |
-| 29 | 539733    | 0.73  | 2.17   | 7.49  | 0.01   | 1.00 | RWD domain containing 2A%2C transcript variant X1                                     |
-| 30 | 613448    | 1.39  | 0.78   | 7.46  | 0.01   | 1.00 | adenylate kinase 5                                                                    |
-| 31 | 515025    | 0.67  | 3.03   | 7.29  | 0.01   | 1.00 | bridging integrator 2                                                                 |
-| 32 | 523124    | 0.75  | 0.71   | 7.25  | 0.01   | 1.00 | pleckstrin and Sec7 domain containing%2C transcript variant X2                        |
-| 33 | 783399    | 4.60  | 4.03   | 6.89  | 0.01   | 1.00 | major allergen Equ c 1-like%2C transcript variant X1                                  |
-| 34 | 615111    | -0.70 | 4.05   | 6.88  | 0.01   | 1.00 | ring finger protein 150%2C transcript variant X5                                      |
-| 35 | 615896    | -2.14 | 1.34   | 6.81  | 0.01   | 1.00 | synaptonemal complex protein 3%2C transcript variant X2                               |
-| 36 | 515653    | 0.70  | 2.08   | 6.72  | 0.01   | 1.00 | small G protein signaling modulator 1%2C transcript variant X1                        |
-| 37 | 527572    | 1.40  | 0.76   | 6.64  | 0.01   | 1.00 | G protein-coupled receptor 37 like 1                                                  |
+|    |    GeneID |   logFC |  logCPM |      LR | PValue |    FDR | gene      | product                                                                               |
+|----+-----------+---------+---------+---------+--------+--------+-----------+---------------------------------------------------------------------------------------|
+|  1 |    513329 |  2.2834 |  1.2464 | 36.0838 | 0.0000 | 0.0000 | LOC513329 | major allergen Equ c 1%2C transcript variant X2                                       |
+|  2 | 100139092 |  1.3766 |  0.3916 | 16.2967 | 0.0001 | 0.2886 | GPR34     | G protein-coupled receptor 34%2C transcript variant X2                                |
+|  3 |    511941 |  0.9035 |  3.1355 | 15.9611 | 0.0001 | 0.2886 | CEACAM19  | carcinoembryonic antigen related cell adhesion molecule 19                            |
+|  4 |    519145 |  1.5596 | -0.5616 | 13.8251 | 0.0002 | 0.6717 | LOC519145 | beta-galactosidase-1-like protein 2%2C transcript variant X1                          |
+|  5 | 100336825 |  0.9564 |  0.9602 | 11.5818 | 0.0007 | 0.9998 | TTLL10    | tubulin tyrosine ligase like 10%2C transcript variant X2                              |
+|  6 |    280839 |  1.3017 |  0.4869 | 10.9832 | 0.0009 | 0.9998 | LHB       | luteinizing hormone beta polypeptide%2C transcript variant X1                         |
+|  7 | 100298265 |  1.6411 | -0.0646 | 10.5104 | 0.0012 | 0.9998 | CPAMD8    | C3 and PZP like%2C alpha-2-macroglobulin domain containing 8%2C transcript variant X1 |
+|  8 |    783257 | -0.6126 |  2.5763 | 10.4299 | 0.0012 | 0.9998 | ABCB6     | ATP binding cassette subfamily B member 6                                             |
+|  9 |    788425 |  1.3738 | -0.2474 | 10.3593 | 0.0013 | 0.9998 | LOC788425 | aflatoxin B1 aldehyde reductase member 4%2C transcript variant X2                     |
+| 10 |    505551 |  1.2709 | -1.0031 | 10.2327 | 0.0014 | 0.9998 | MYCBPAP   | MYCBP associated protein                                                              |
+| 11 |    539467 |  0.9888 |  3.1842 | 10.0680 | 0.0015 | 0.9998 | PKDCC     | protein kinase domain containing%2C cytoplasmic                                       |
+| 12 |    286858 |  1.2357 |  8.3789 |  9.7174 | 0.0018 | 0.9998 | PTGDS     | prostaglandin D2 synthase%2C transcript variant X2                                    |
+| 13 |    530346 |  1.2841 | -0.0605 |  9.5219 | 0.0020 | 0.9998 | ZNF621    | zinc finger protein 621                                                               |
+| 14 |    519940 | -1.5876 |  1.5054 |  8.7812 | 0.0030 | 0.9998 | RDH16     | retinol dehydrogenase 16 (all-trans)%2C transcript variant X5                         |
+| 15 | 100336551 | -0.6278 |  2.7815 |  8.7279 | 0.0031 | 0.9998 | ABCC9     | ATP binding cassette subfamily C member 9%2C transcript variant X3                    |
+| 16 |    517459 | -2.9386 |  2.1089 |  8.6482 | 0.0033 | 0.9998 | GABRP     | gamma-aminobutyric acid type A receptor pi subunit%2C transcript variant X2           |
+| 17 |    286791 | -1.9281 |  1.7573 |  8.5654 | 0.0034 | 0.9998 | BDA20     | major allergen BDA20%2C transcript variant X1                                         |
+| 18 |    784038 | -5.4453 |  5.0321 |  8.5339 | 0.0035 | 0.9998 | LOC784038 | testis-specific H1 histone                                                            |
+| 19 |    518047 | -1.9013 | -0.2802 |  8.4813 | 0.0036 | 0.9998 | SLCO1C1   | solute carrier organic anion transporter family member 1C1%2C transcript variant X2   |
+| 20 |    534578 |  0.7251 |  3.5213 |  8.4583 | 0.0036 | 0.9998 | LOC534578 | vascular cell adhesion molecule 1-like                                                |
+| 21 |    319095 | -0.8635 |  4.0900 |  8.3819 | 0.0038 | 0.9998 | ADCYAP1R1 | ADCYAP receptor type I%2C transcript variant X5                                       |
+| 22 |    524115 |  1.0508 | -0.3196 |  7.9895 | 0.0047 | 0.9998 | GABRE     | gamma-aminobutyric acid type A receptor epsilon subunit                               |
+| 23 |    534512 |  1.1463 |  1.0113 |  7.8659 | 0.0050 | 0.9998 | HMCN2     | hemicentin 2%2C transcript variant X1                                                 |
+| 24 |    404129 |  1.4654 | -0.6432 |  7.7895 | 0.0053 | 0.9998 | DGAT2     | diacylglycerol O-acyltransferase 2                                                    |
+| 25 | 100295741 |  1.3779 |  4.1745 |  7.7004 | 0.0055 | 0.9998 | ZG16B     | zymogen granule protein 16B                                                           |
+| 26 |    767895 |  0.6997 |  2.4466 |  7.6528 | 0.0057 | 0.9998 | WDR60     | WD repeat domain 60%2C transcript variant X4                                          |
+| 27 |    534505 | -1.8257 |  1.7249 |  7.6519 | 0.0057 | 0.9998 | CPXM2     | carboxypeptidase X%2C M14 family member 2                                             |
+| 28 |    785756 | -2.5650 |  3.6500 |  7.5531 | 0.0060 | 0.9998 | LOC785756 | androgen binding protein beta-like                                                    |
+| 29 |    539733 |  0.7298 |  2.1718 |  7.4913 | 0.0062 | 0.9998 | RWDD2A    | RWD domain containing 2A%2C transcript variant X1                                     |
+| 30 |    613448 |  1.3919 |  0.7843 |  7.4564 | 0.0063 | 0.9998 | AK5       | adenylate kinase 5                                                                    |
+| 31 |    515025 |  0.6691 |  3.0265 |  7.2853 | 0.0070 | 0.9998 | BIN2      | bridging integrator 2                                                                 |
+| 32 |    523124 |  0.7462 |  0.7058 |  7.2466 | 0.0071 | 0.9998 | PSD       | pleckstrin and Sec7 domain containing%2C transcript variant X2                        |
+| 33 |    783399 |  4.5981 |  4.0281 |  6.8908 | 0.0087 | 0.9998 | LOC783399 | major allergen Equ c 1-like%2C transcript variant X1                                  |
+| 34 |    615111 | -0.6952 |  4.0500 |  6.8817 | 0.0087 | 0.9998 | RNF150    | ring finger protein 150%2C transcript variant X5                                      |
+| 35 |    615896 | -2.1402 |  1.3379 |  6.8148 | 0.0090 | 0.9998 | SYCP3     | synaptonemal complex protein 3%2C transcript variant X2                               |
+| 36 |    515653 |  0.6979 |  2.0786 |  6.7194 | 0.0095 | 0.9998 | SGSM1     | small G protein signaling modulator 1%2C transcript variant X1                        |
+| 37 |    527572 |  1.4034 |  0.7599 |  6.6427 | 0.0100 | 0.9998 | GPR37L1   | G protein-coupled receptor 37 like 1                                                  |
 :end:
 
 
 - MD plot
   #+header: :results output file graphics :file mean-diff.lrt.png
-  #+header: :width 8 :height 6 :units in :res 600
+  #+header: :width 1920 :height 1280 :res 100
   #+begin_src R :session bovine
 
+names <- dplyr::select(txdb, GeneID, gene) %>%
+  distinct(GeneID, .keep_all=T)
+
 topTags(lrt, n=Inf)$table %>%
-   mutate(Sig = (PValue <= 0.01 & abs(logFC) >= 0.6),
-          Dir = ifelse(Sig, ifelse(logFC < 0, "Down", "Up"), "Not Significant")) %>%
+    as.data.frame %>%
+    rownames_to_column("GeneID") %>%
+    left_join(names) %>%
+    mutate(Sig = (PValue <= 0.01 & abs(logFC) >= 0.6),
+          Dir = ifelse(Sig, ifelse(logFC < 0, "Down", "Up"), "Not Significant"),
+          label=if_else(Sig, gene, NA)) %>%
      arrange(Sig) %>%
-ggplot(aes(logCPM, logFC, color=Dir, size=Sig)) +
+ggplot(aes(logCPM, logFC, color=Dir, size=Sig, label=label)) +
   geom_point() +
+  geom_label_repel(size = 4, max.overlaps=100) +
   scale_size_manual(values=c(2/5, 1), guide=F) +
-  scale_color_manual(values=c(Up="red", Down="blue", "grey")) +
+  scale_color_manual(values=c(Up="red", Down="blue", "grey"),
+                     labels=c(Up="Up (25)", Down="Down (12)")) +
   xlab(expression("log"[2]*"CPM")) +
   ylab(expression("log"[2]*"FC")) +
-  theme_minimal() +
-  theme(legend.position = 'none')
+  labs(color="Significant\n(p-value <= 0.01, |logFC| >= 0.6)") +
+  theme_bw() +
+  theme( legend.position = c(0.8,0.9),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size=14),,
+    axis.title = element_text(size=16),
+    legend.text = element_text(size=14),
+    legend.title = element_text(size=16)
+    )
+
   #+end_src
 
   #+RESULTS:
@@ -439,7 +540,7 @@ ggplot(aes(logFC, -log(PValue,10), color=Dir, size=Sig)) + # -log10 conversion
 
 ** KEGG
 Download pathways and run fry
-#+begin_src R :session bovine
+#+begin_src R :session bovine :results output
 kg.list <- getGeneKEGGLinks("bta")
 kg.sets <- split(kg.list$GeneID, kg.list$PathwayID)
 
@@ -448,6 +549,8 @@ kg.names <- getKEGGPathwayNames('bta')
 kegg.fry <- fry(y, kg.sets, design)
 
 #+end_src
+
+#+RESULTS:
 
 Get pathways with p-value <= 0.05
 #+begin_src R :session bovine :results output drawer
@@ -467,7 +570,7 @@ kegg.fry %>%
 | 1 | bta00515  |  21.00 | Up        |   0.01 | 1.00 |         0.42 |      0.99 | Mannose type O-glycan biosynthesis |
 | 2 | bta00590  |  42.00 | Up        |   0.01 | 1.00 |         0.28 |      0.99 | Arachidonic acid metabolism        |
 | 3 | bta00591  |  16.00 | Up        |   0.04 | 1.00 |         0.27 |      0.99 | Linoleic acid metabolism           |
-| 4 | bta00340  |  15.00 | Down      |   0.04 | 1.00 |         0.30 |      0.99 | Histidine metabolism               |
+| 4 | bta00340  |  15.00 | Down      |   0.04 | 1.00 |         0.31 |      0.99 | Histidine metabolism               |
 :end:
 
 - bta00515 :: Mannose type O-glycan biosynthesis
@@ -483,7 +586,25 @@ pathview(pathway.id=pathway,
   #+end_src
 
   #+RESULTS: pathview
-  [[./bta00515.pathview.png]]
+  #+begin_example
+
+  ##############################################################################
+  Pathview is an open source software package distributed under GNU General
+  Public License version 3 (GPLv3). Details of GPLv3 is available at
+  http://www.gnu.org/licenses/gpl-3.0.html. Particullary, users are required to
+  formally cite the original Pathview paper (not just mention it) in publications
+  or products. For details, do citation("pathview") within R.
+
+  The pathview downloads and uses KEGG data. Non-academic uses may require a KEGG
+  license agreement (details at http://www.kegg.jp/kegg/legal.html).
+  ##############################################################################
+  'select()' returned 1:1 mapping between keys and columns
+  Info: Working in directory /home/maa146/projects/zully.cow-rnaseq
+  Info: Writing image file bta00515.pathview.png
+  Info: some node width is different from others, and hence adjusted!
+  Error in array(col.rgb[, i], dim(node.rgb)[3:1]) :
+    negative length vectors are not allowed
+  #+end_example
 
 - bta00590 :: Arachidonic acid metabolism
   [[./bta00590.pathview.png]]
@@ -779,6 +900,853 @@ loaded via a namespace (and not attached):
 [73] cachem_1.0.6           broom_1.0.3            survival_3.3-1
 [76] googledrive_2.0.0      gargle_1.3.0           memoise_2.0.1
 [79] timechange_0.2.0       ellipsis_0.3.2
+#+end_example
+
+#  LocalWords:  transcriptome
+
+
+* EdgeR w/o Outlier
+** Load data
+#+begin_src R :session bovine.rm :results output
+library(edgeR)
+library(statmod)
+library(tximport)
+library(data.table)
+library(tidyverse)
+library(ggrepel)
+library(ascii)
+options(asciiType="org", width=80)
+meta.data <- data.frame(library=c("SLICK_2041", "SLICK_2128", "SLICK_2129",
+                                  "SLICK_2171", "SLICK_2202", "SLICK_2287",
+                                  "SLICK_466", "WT_2058", "WT_2068", "WT_2089",
+                                  "WT_2116", "WT_2226", "WT_2273"),
+                        group=factor(rep(c("SL", "WT"), each=7, length.out = 13),
+                                     levels=c("WT", "SL")))
+
+files <- file.path('2-salmon', meta.data$library,'quant.sf')
+names(files) <- meta.data$library
+
+
+design <- model.matrix(~ group, data=meta.data)
+colnames(design) <- make.names(gsub("group", "", colnames(design)))
+
+## Create tx2gene from gff
+txdb <- fread("0-ref/ncbi_dataset/data/GCF_002263795.2/genomic.gff",
+              skip=8, fill=T, header=F, sep="\t")[V3=='mRNA',] %>%
+  dplyr::select('Attr'=V9) %>%
+  as.data.frame %>%
+  tibble::rowid_to_column(var='rowid') %>%
+  separate_rows(Attr, sep=';') %>%
+  separate(Attr, into=c('key', 'value'), sep='=') %>%
+  spread(key, value) %>%
+  mutate(GeneID = sub(".*GeneID:([^,]*).*", "\\1", Dbxref))
+
+tx2gene <- dplyr::select(txdb, Name, GeneID)
+
+txi <- tximport(files, type = "salmon", tx2gene = tx2gene)
+  #+end_src
+
+  #+RESULTS:
+  : reading in files with read_tsv
+  : 1 2 3 4 5 6 7 8 9 10 11 12 13
+  : removing duplicated transcript rows from tx2gene
+  : transcripts missing from tx2gene: 12558
+  : summarizing abundance
+  : summarizing counts
+  : summarizing length
+
+** Normalize counts, Filter Genes, and Estimate Dispersions
+#+begin_src R :session bovine.rm :results output
+cts <- txi$counts
+normMat <- txi$length
+
+## Obtaining per-observation scaling factors for length, adjusted to avoid
+## changing the magnitude of the counts.
+normMat <- normMat/exp(rowMeans(log(normMat)))
+normCts <- cts/normMat
+
+ # Computing effective library sizes from scaled counts, to account for
+# composition biases between samples.
+eff.lib <- calcNormFactors(normCts) * colSums(normCts)
+
+# Combining effective library sizes with the length factors, and calculating
+# offsets for a log-link GLM.
+normMat <- sweep(normMat, 2, eff.lib, "*")
+normMat <- log(normMat)
+
+# Creating a DGEList object for use in edgeR.
+d <- DGEList(cts) %>% scaleOffset(normMat)
+
+# filtering using the design information
+keep <- filterByExpr(d, design)
+
+y <- d[keep, ,keep.lib.sizes=F ] %>%
+  calcNormFactors %>%
+  estimateDisp(design, robust=T)
+
+
+
+#+end_src
+
+#+RESULTS:
+: Warning message:
+: In calcNormFactors.DGEList(.) :
+:   object contains offsets, which take precedence over library
+: sizes and norm factors (and which will not be recomputed).
+
+
+- unique genes
+
+  #+begin_src R :session bovine.rm :results output drawer
+as.data.frame(txi$counts) %>%
+  rownames_to_column('GeneID') %>%
+gather(-GeneID, key="library", value="count") %>%
+  left_join(meta.data, by='library') %>%
+  filter(count > 0) %>%
+  group_by(GeneID, group) %>%
+  count %>%
+  spread(group, n) %>%
+  filter(is.na(WT) | is.na(SL)) %>%
+  gather(-GeneID, key="Type", value="Samples") %>%
+  filter(Samples >= 4) %>%
+  ascii(digits=0)
+
+  #+end_src
+
+  #+RESULTS:
+  :results:
+  |    |    GeneID | Type | Samples |
+  |----+-----------+------+---------|
+  |  1 | 112441545 | WT   |       6 |
+  |  2 | 112447300 | WT   |       5 |
+  |  3 |    505979 | WT   |       4 |
+  |  4 |    505993 | WT   |       4 |
+  |  5 |    523830 | WT   |       4 |
+  |  6 |    535831 | WT   |       4 |
+  |  7 |    615310 | WT   |       4 |
+  |  8 |    786611 | WT   |       4 |
+  |  9 | 101902675 | SL   |       4 |
+  | 10 | 101905578 | SL   |       4 |
+  | 11 | 101906363 | SL   |       4 |
+  | 12 | 104968609 | SL   |       5 |
+  | 13 | 107132566 | SL   |       6 |
+  | 14 | 112449108 | SL   |       4 |
+  | 15 |    512850 | SL   |       4 |
+  | 16 |    516736 | SL   |       5 |
+  | 17 |    524709 | SL   |       4 |
+  | 18 |    526745 | SL   |       4 |
+  | 19 |    540297 | SL   |       4 |
+  | 20 |    613925 | SL   |       5 |
+  | 21 |    616105 | SL   |       4 |
+  | 22 |    780786 | SL   |       4 |
+  | 23 |    783189 | SL   |       4 |
+  | 24 |    790886 | SL   |       4 |
+  :end:
+
+
+- Unique Gene Venn Diagram
+  #+header: :results output file graphics :file venn.rm.png
+  #+header: :width 4 :height 4 :units in :res 600
+  #+begin_src R :session bovine.rm
+unique.gene.venn.plot <- as.data.frame(txi$counts) %>%
+  rownames_to_column('gene') %>%
+gather(-gene, key="library", value="count") %>%
+  left_join(meta.data) %>%
+  filter(count > 0) %>%
+  group_by(gene, group) %>%
+  count %>%
+  spread(group, n) %>%
+  filter(is.na(WT) | is.na(SL)) %>%
+  gather(-gene, key="type", value="count") %>%
+  filter(!is.na(count)) %>%
+  arrange(count) %>%
+  mutate(type=fct_rev(type)) %>%
+  ggplot(aes(type,1,fill=count)) +
+  geom_col() +
+  scale_x_discrete(breaks=c("WT", "SL"), labels=c("Wild-Type", "SLICK")) +
+  scale_y_continuous(expand=c(0,0)) +
+  scale_fill_distiller(palette = "PuRd") +
+  guides(fill=guide_colorbar(title="Number of \nSamples")) +
+  labs(y="Number of unique genes", x="Hair Coat Type") +
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_text(size=14),,
+    axis.title = element_text(size=16),
+    legend.text = element_text(size=14),
+    legend.title = element_text(size=16)
+    )
+
+unique.gene.venn.plot
+  #+end_src
+
+  #+RESULTS:
+  [[file:venn.rm.png]]
+
+- Filtered/Surviving gene summary
+  #+begin_src R :session bovine.rm
+  table(keep)
+  #+end_src
+
+  #+RESULTS:
+  | FALSE |  7373 |
+  | TRUE  | 13573 |
+
+- MDS
+  #+header: :results output file graphics :file MDS.rm.png
+  #+header: :width 8 :height 6 :units in :res 600
+  #+begin_src R :session bovine.rm
+mds.data <- plotMDS(y, plot=F)
+
+mds.plot <- cbind(meta.data, x=mds.data$x, y=mds.data$y) %>%
+  mutate(library = sub('.*_', '', library)) %>%
+  ggplot(aes(x,y, color=group, label=library)) +
+  geom_point() +
+  geom_text_repel(show.legend = F) +
+  scale_color_manual(values=c( "#cc546e", "#4db598"), labels=c("Wild-Type", "SLICK")) +
+  xlab(sprintf("Dimension 1 (%0.2f%%)", mds.data$var.explained[1]*100)) +
+  ylab(sprintf("Dimension 2 (%0.2f%%)", mds.data$var.explained[2]*100)) +
+  labs(color="Hair Coat Type") +
+  theme_bw() +
+  theme(legend.position = c(0.8,0.8),
+        legend.background = element_rect(fill='white', color="grey"),
+        panel.grid = element_blank()) +
+    theme( legend.position = c(0.8,0.9),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size=14),,
+    axis.title = element_text(size=16),
+    legend.text = element_text(size=14),
+    legend.title = element_text(size=16)
+    )
+mds.plot
+  #+end_src
+
+  #+RESULTS:
+  [[file:MDS.rm.png]]
+
+- Panel MDS/Venn
+  #+header: :results output file graphics :file venn-MDS.rm.png
+  #+header: :width 12 :height 6 :units in :res 300
+  #+begin_src R :session bovine.rm
+library(cowplot)
+
+plot_grid(mds.plot, unique.gene.venn.plot, labels=c("A", "B"), rel_widths = c(3,2))
+  #+end_src
+
+  #+RESULTS:
+  [[file:venn-MDS.rm.png]]
+
+- Mean-Difference (MD) plots
+  #+header: :results output file graphics :file mean-diff.rm.png
+  #+header: :width 16 :height 10.5 :units in :res 300
+  #+begin_src R :session bovine.rm
+
+
+par(mfrow = c(3,5))
+for(x in 1:13){
+  plotMD(y, column=x, ylim=c(-8,8))
+  abline(h=0, col="red", lty=2, lwd=2)
+}
+  #+end_src
+
+  #+RESULTS:
+  [[file:mean-diff.rm.png]]
+
+- Biological Coefficient of Variation (BCV)
+  #+header: :results output file graphics :file BCV.rm.png
+  #+header: :width 8 :height 6 :units in :res 600
+  #+begin_src R :session bovine.rm
+plotBCV(y)
+  #+end_src
+
+  #+RESULTS:
+  [[file:BCV.rm.png]]
+
+** COMMENT DEG QL test (FC > 0)
+  #+begin_src R :session bovine :results output drawer
+library(ascii)
+options(asciiType = "org", width = 80)
+
+fit <- glmQLFit(y,design, robust=T)
+qlf <- glmQLFTest(fit)
+topTags(qlf, n=Inf) %>%
+  as.data.frame %>%
+  filter(PValue <= 0.01 & abs(logFC) > 0.6) %>%
+  tibble::rownames_to_column("GeneID") %>%
+  left_join(desc, by="GeneID") %>%
+  ascii(digits = 4 )
+  #+end_src
+
+  #+RESULTS:
+  :results:
+  [1m[33mError[39m in `auto_copy()`:[22m
+  [1m[22m[33m![39m `x` and `y` must share the same src.
+  [36mℹ[39m set `copy` = TRUE (may be slow).
+  [90mRun `]8;;rstudio:run:rlang::last_error()rlang::last_error()]8;;` to see where the error occurred.[39m
+  :end:
+
+** COMMENT DEG QL test (FC > 1.5)
+  #+begin_src R :session bovine :results output drawer
+library(ascii)
+options(asciiType = "org", width = 80)
+
+tr <- glmTreat(fit,lfc=0.5)
+topTags(tr)
+topTags(tr, n=Inf) %>%
+  as.data.frame %>%
+  filter(PValue <= 0.01 ) %>%
+  tibble::rownames_to_column("GeneID") %>%
+  left_join(desc, by="GeneID") %>%
+  ascii()
+  #+end_src
+
+  #+RESULTS:
+  :results:
+  |   |    GeneID | logFC | unshrunk.logFC | logCPM | PValue |  FDR | product                                                                     |
+  |---+-----------+-------+----------------+--------+--------+------+-----------------------------------------------------------------------------|
+  | 1 |    513329 |  2.29 |           2.29 |   1.25 |   0.00 | 0.62 | major allergen Equ c 1%2C transcript variant X2                             |
+  | 2 |    784038 | -5.48 |          -5.48 |   5.03 |   0.00 | 1.00 | testis-specific H1 histone                                                  |
+  | 3 | 100139092 |  1.40 |           1.40 |   0.39 |   0.01 | 1.00 | G protein-coupled receptor 34%2C transcript variant X2                      |
+  | 4 |    519145 |  1.57 |           1.58 |  -0.56 |   0.01 | 1.00 | beta-galactosidase-1-like protein 2%2C transcript variant X1                |
+  | 5 |    517459 | -2.90 |          -2.91 |   2.11 |   0.01 | 1.00 | gamma-aminobutyric acid type A receptor pi subunit%2C transcript variant X2 |
+  :end:
+
+** DEG LRT test
+#+begin_src  R :session bovine.rm :results output drawer
+
+fit <- glmFit(y,design,robust=T)
+lrt <- glmLRT(fit)
+
+desc <- txdb %>%
+  dplyr::select(GeneID, gene, product) %>%
+  distinct(GeneID, .keep_all=T)
+
+topTags(lrt, n=Inf) %>%
+  as.data.frame %>%
+  filter(PValue <= 0.01 & abs(logFC) > 0.6) %>%
+  tibble::rownames_to_column("GeneID") %>%
+  left_join(desc, by="GeneID")  %>%
+  ascii(format=c('s', 'f', 'f','f', 'g', 'g', 's', 's'), digits=4)
+
+#+end_src
+
+#+RESULTS:
+:results:
+|    |    GeneID |   logFC |  logCPM |      LR |    PValue |       FDR | gene         | product                                                                               |
+|----+-----------+---------+---------+---------+-----------+-----------+--------------+---------------------------------------------------------------------------------------|
+|  1 |    513329 |  2.2612 |  1.3791 | 31.0589 | 2.503e-08 | 0.0003398 | LOC513329    | major allergen Equ c 1%2C transcript variant X2                                       |
+|  2 | 100139092 |  1.2267 |  0.5330 | 15.1984 | 9.679e-05 |    0.5212 | GPR34        | G protein-coupled receptor 34%2C transcript variant X2                                |
+|  3 |    618181 |  1.9566 | -0.9814 | 14.8696 | 0.0001152 |    0.5212 | GRIN2D       | glutamate ionotropic receptor NMDA type subunit 2D                                    |
+|  4 |    281867 | -1.7706 | -0.8097 | 14.0097 | 0.0001819 |    0.6152 | INHBA        | inhibin subunit beta A%2C transcript variant X2                                       |
+|  5 |    511941 |  0.8150 |  3.2598 | 13.5964 | 0.0002266 |    0.6152 | CEACAM19     | carcinoembryonic antigen related cell adhesion molecule 19                            |
+|  6 |    280839 |  1.4570 |  0.5286 | 12.6274 | 0.0003801 |    0.8599 | LHB          | luteinizing hormone beta polypeptide%2C transcript variant X1                         |
+|  7 |    280863 | -1.1996 |  1.5895 | 12.2083 | 0.0004758 |    0.9225 | MOG          | myelin oligodendrocyte glycoprotein%2C transcript variant X4                          |
+|  8 |    519145 |  1.4944 | -0.4487 | 11.5354 | 0.0006828 |         1 | LOC519145    | beta-galactosidase-1-like protein 2%2C transcript variant X1                          |
+|  9 |    784038 | -5.6681 |  5.2023 | 11.3173 | 0.0007679 |         1 | LOC784038    | testis-specific H1 histone                                                            |
+| 10 | 107131164 |  0.6224 |  3.9435 | 11.2429 | 0.0007993 |         1 | ADAMTSL5     | ADAMTS like 5%2C transcript variant X4                                                |
+| 11 |    538700 | -2.2637 | -0.0336 | 10.5714 |  0.001149 |         1 | BOLA-DRB2    | histocompatibility complex%2C class II%2C DR beta 2%2C transcript variant X2          |
+| 12 |    319095 | -0.9615 |  4.1792 | 10.2976 |  0.001332 |         1 | ADCYAP1R1    | ADCYAP receptor type I%2C transcript variant X5                                       |
+| 13 |    783257 | -0.6324 |  2.6277 | 10.1605 |  0.001435 |         1 | ABCB6        | ATP binding cassette subfamily B member 6                                             |
+| 14 | 100336825 |  0.9281 |  1.0589 |  9.8293 |  0.001718 |         1 | TTLL10       | tubulin tyrosine ligase like 10%2C transcript variant X2                              |
+| 15 |    785756 | -2.7780 |  3.8089 |  9.6565 |  0.001887 |         1 | LOC785756    | androgen binding protein beta-like                                                    |
+| 16 |    529491 | -0.6692 |  2.3837 |  9.5262 |  0.002026 |         1 | PMS1         | PMS1 homolog 1%2C mismatch repair system component                                    |
+| 17 |    782348 |  1.3334 | -0.2756 |  9.3383 |  0.002244 |         1 | LOC782348    | uncharacterized LOC782348%2C transcript variant X1                                    |
+| 18 |    767895 |  0.7918 |  2.5027 |  9.2474 |  0.002358 |         1 | WDR60        | WD repeat domain 60%2C transcript variant X4                                          |
+| 19 |    286791 | -2.0579 |  1.8573 |  9.1437 |  0.002496 |         1 | BDA20        | major allergen BDA20%2C transcript variant X1                                         |
+| 20 |    788425 |  1.3382 | -0.1399 |  8.7300 |   0.00313 |         1 | LOC788425    | aflatoxin B1 aldehyde reductase member 4%2C transcript variant X2                     |
+| 21 | 100298265 |  1.5069 |  0.0679 |  8.6451 |  0.003279 |         1 | CPAMD8       | C3 and PZP like%2C alpha-2-macroglobulin domain containing 8%2C transcript variant X1 |
+| 22 |    518047 | -2.0065 | -0.2084 |  8.6408 |  0.003287 |         1 | SLCO1C1      | solute carrier organic anion transporter family member 1C1%2C transcript variant X2   |
+| 23 |    517459 | -3.0599 |  2.1857 |  8.5696 |  0.003418 |         1 | GABRP        | gamma-aminobutyric acid type A receptor pi subunit%2C transcript variant X2           |
+| 24 |    615323 |  0.8781 |  5.2371 |  8.5691 |  0.003419 |         1 | GRP          | gastrin releasing peptide                                                             |
+| 25 |    539733 |  0.8105 |  2.2088 |  8.4830 |  0.003585 |         1 | RWDD2A       | RWD domain containing 2A%2C transcript variant X1                                     |
+| 26 |    534505 | -1.9690 |  1.8282 |  8.4545 |  0.003641 |         1 | CPXM2        | carboxypeptidase X%2C M14 family member 2                                             |
+| 27 |    505551 |  1.1909 | -0.8951 |  8.3957 |  0.003761 |         1 | MYCBPAP      | MYCBP associated protein                                                              |
+| 28 |    519940 | -1.6339 |  1.5724 |  8.3492 |  0.003859 |         1 | RDH16        | retinol dehydrogenase 16 (all-trans)%2C transcript variant X5                         |
+| 29 |    539467 |  0.9590 |  3.2906 |  8.2536 |  0.004067 |         1 | PKDCC        | protein kinase domain containing%2C cytoplasmic                                       |
+| 30 | 100271839 | -0.7476 |  1.3874 |  7.6771 |  0.005593 |         1 | C23H6orf141  | chromosome 23 C6orf141 homolog                                                        |
+| 31 |    530346 |  1.1875 |  0.0604 |  7.6219 |  0.005766 |         1 | ZNF621       | zinc finger protein 621                                                               |
+| 32 |    286858 |  1.1112 |  8.5204 |  7.6061 |  0.005817 |         1 | PTGDS        | prostaglandin D2 synthase%2C transcript variant X2                                    |
+| 33 |    511042 | -1.1189 |  1.7152 |  7.5741 |  0.005921 |         1 | NMNAT2       | nicotinamide nucleotide adenylyltransferase 2%2C transcript variant X4                |
+| 34 |    615896 | -2.3026 |  1.4550 |  7.4777 |  0.006247 |         1 | SYCP3        | synaptonemal complex protein 3%2C transcript variant X2                               |
+| 35 |    505830 |  0.9327 |  0.3466 |  7.3412 |  0.006739 |         1 | APOM         | apolipoprotein M%2C transcript variant X2                                             |
+| 36 |    280948 |  1.0145 |  3.9968 |  7.1634 |   0.00744 |         1 | TTR          | transthyretin                                                                         |
+| 37 |    524150 | -1.5792 | -1.6256 |  6.8693 |  0.008769 |         1 | HOXA2        | homeobox A2                                                                           |
+| 38 | 100335365 |  1.2305 | -1.3344 |  6.8628 |  0.008801 |         1 | STPG4        | sperm-tail PG-rich repeat containing 4%2C transcript variant X2                       |
+| 39 |    404129 |  1.4760 | -0.5501 |  6.8321 |  0.008953 |         1 | DGAT2        | diacylglycerol O-acyltransferase 2                                                    |
+| 40 | 100848815 | -1.4578 |  5.5645 |  6.7733 |  0.009253 |         1 | LOC100848815 | SLA class II histocompatibility antigen%2C DQ haplotype D alpha chain-like            |
+| 41 |    534578 |  0.6853 |  3.6240 |  6.7374 |  0.009441 |         1 | LOC534578    | vascular cell adhesion molecule 1-like                                                |
+| 42 |    507280 |  0.9027 |  4.2938 |  6.7097 |  0.009589 |         1 | TM4SF18      | transmembrane 4 L six family member 18%2C transcript variant X1                       |
+| 43 |    613448 |  1.2015 |  0.9361 |  6.6744 |  0.009781 |         1 | AK5          | adenylate kinase 5                                                                    |
+:end:
+
+
+- MD plot
+  #+header: :results output file graphics :file mean-diff.lrt.rm.png
+  #+header: :width 1920 :height 1280 :res 100
+  #+begin_src R :session bovine.rm
+
+names <- dplyr::select(txdb, GeneID, gene) %>%
+  distinct(GeneID, .keep_all=T)
+
+topTags(lrt, n=Inf)$table %>%
+    as.data.frame %>%
+    rownames_to_column("GeneID") %>%
+    left_join(names) %>%
+    mutate(Sig = (PValue <= 0.01 & abs(logFC) >= 0.6),
+          Dir = ifelse(Sig, ifelse(logFC < 0, "Down", "Up"), "Not Significant"),
+          label=if_else(Sig, gene, NA)) %>%
+     arrange(Sig) %>%
+ggplot(aes(logCPM, logFC, color=Dir, size=Sig, label=label)) +
+  geom_point() +
+  geom_label_repel(size = 4, max.overlaps=100) +
+  scale_size_manual(values=c(2/5, 1), guide=F) +
+  scale_color_manual(values=c(Up="red", Down="blue", "grey"),
+                     labels=c(Up="Up (25)", Down="Down (12)")) +
+  xlab(expression("log"[2]*"CPM")) +
+  ylab(expression("log"[2]*"FC")) +
+  labs(color="Significant\n(p-value <= 0.01, |logFC| >= 0.6)") +
+  theme_bw() +
+  theme( legend.position = c(0.8,0.9),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size=14),,
+    axis.title = element_text(size=16),
+    legend.text = element_text(size=14),
+    legend.title = element_text(size=16)
+    )
+
+  #+end_src
+
+  #+RESULTS:
+  [[file:mean-diff.lrt.rm.png]]
+
+- Volcano
+  #+header: :results output file graphics :file volcano.lrt.rm.png
+  #+header: :width 8 :height 6 :units in :res 600
+  #+begin_src R :session bovine.rm
+
+topTags(lrt, n=Inf)$table %>%
+   mutate(Sig = (PValue <= 0.01 & abs(logFC) >= 0.6),
+          Dir = ifelse(Sig, ifelse(logFC < 0, "Down", "Up"), "Not Significant")) %>%
+     arrange(Sig) %>%
+ggplot(aes(logFC, -log(PValue,10), color=Dir, size=Sig)) + # -log10 conversion
+  geom_point() +
+  scale_size_manual(values=c(2/5, 1), guide=F) +
+  scale_color_manual(values=c(Up="red", Down="blue", "grey")) +
+  xlab(expression("log"[2]*"FC")) +
+  ylab(expression("-log"[10]*"p-value")) +
+  theme_minimal() +
+  theme(legend.position = 'none')
+  #+end_src
+
+  #+RESULTS:
+  [[file:volcano.lrt.rm.png]]
+
+** KEGG
+Download pathways and run fry
+#+begin_src R :session bovine.rm :results output
+kg.list <- getGeneKEGGLinks("bta")
+kg.sets <- split(kg.list$GeneID, kg.list$PathwayID)
+
+kg.names <- getKEGGPathwayNames('bta')
+
+kegg.fry <- fry(y, kg.sets, design)
+
+#+end_src
+
+#+RESULTS:
+
+
+Get pathways with p-value <= 0.05
+#+begin_src R :session bovine.rm :results output drawer
+kegg.fry %>%
+  rownames_to_column('PathwayID') %>%
+  mutate(PathwayID=sub('path:', '', PathwayID)) %>%
+  left_join(kg.names, by="PathwayID") %>%
+  filter(PValue <= 0.05) %>%
+  mutate(Description = sub(' - Bos taurus \\(cow\\)', '', Description)) %>%
+  ascii(format=c('s', 'd', 's', 'g' ,'g' ,'g' , 'g', 's'))
+#+end_src
+
+#+RESULTS:
+:results:
+|   | PathwayID | NGenes | Direction |  PValue |  FDR | PValue.Mixed | FDR.Mixed | Description                           |
+|---+-----------+--------+-----------+---------+------+--------------+-----------+---------------------------------------|
+| 1 | bta00515  |     21 | Up        | 0.00057 |  0.2 |         0.31 |      0.94 | Mannose type O-glycan biosynthesis    |
+| 2 | bta00562  |     67 | Down      |   0.012 | 0.99 |         0.67 |      0.94 | Inositol phosphate metabolism         |
+| 3 | bta04070  |     86 | Down      |   0.014 | 0.99 |         0.62 |      0.94 | Phosphatidylinositol signaling system |
+| 4 | bta00590  |     44 | Up        |   0.021 | 0.99 |         0.48 |      0.94 | Arachidonic acid metabolism           |
+| 5 | bta04530  |    146 | Down      |   0.027 | 0.99 |         0.53 |      0.94 | Tight junction                        |
+| 6 | bta05211  |     67 | Down      |   0.041 | 0.99 |         0.72 |      0.94 | Renal cell carcinoma                  |
+| 7 | bta00310  |     57 | Down      |   0.048 | 0.99 |         0.85 |      0.94 | Lysine degradation                    |
+| 8 | bta04012  |     72 | Down      |    0.05 | 0.99 |         0.69 |      0.94 | ErbB signaling pathway                |
+:end:
+
+- bta00515 :: Mannose type O-glycan biosynthesis
+  #+name: pathview.rm
+  #+header: :results output :var pathway="00515"
+  #+begin_src R :session bovine.rm
+library(pathview)
+pathview(pathway.id=pathway,
+         kegg.dir = '4-kegg/',
+         gene.data = setNames(lrt$table$logFC, row.names(lrt$table)),
+         species='bta')
+  #+end_src
+
+  #+RESULTS: pathview
+  [[./bta00515.pathview.png]]
+
+- bta00562 :: Inositol phosphate metabolism
+  #+CALL: pathview.rm(pathway="00562")
+
+  #+RESULTS:
+  : Info: Downloading xml files for bta00562, 1/1 pathways..
+  : Info: Downloading png files for bta00562, 1/1 pathways..
+  : 'select()' returned 1:1 mapping between keys and columns
+  : Info: Working in directory /home/maa146/projects/zully.cow-rnaseq
+  : Info: Writing image file bta00562.pathview.png
+
+  [[./bta00562.pathview.png]]
+
+- bta04070 :: Phosphatidylinositol signaling system
+  #+CALL: pathview.rm(pathway="04070")
+
+  #+RESULTS:
+  : Info: Downloading xml files for bta04070, 1/1 pathways..
+  : Info: Downloading png files for bta04070, 1/1 pathways..
+  : 'select()' returned 1:1 mapping between keys and columns
+  : Info: Working in directory /home/maa146/projects/zully.cow-rnaseq
+  : Info: Writing image file bta04070.pathview.png
+ [[./bta04070.pathview.png]]
+- bta00591 :: Linoleic acid metabolism
+  [[./bta00591.pathview.png]]
+- bta00340 :: Histidine metabolism
+  [[./bta00340.pathview.png]]
+
+
+** GO
+  #+begin_src R :session bovine.rm :results output discard
+library(org.Bt.eg.db)
+library(GO.db)
+
+go.db <- select(org.Bt.eg.db,
+       keys=keys(org.Bt.eg.db, keytype = "ENTREZID"),
+       columns="GO",
+       keytype="ENTREZID") %>%
+  filter(!is.na(GO))
+
+
+go.sets <- split(go.db$ENTREZID, go.db$GO)
+
+go.names <- select(GO.db,
+                   keys=names(go.sets),
+                   columns=c("GOID", "TERM", "ONTOLOGY"),
+                   keytype="GOID")
+
+go.fry <- fry(y, go.sets, design)
+  #+end_src
+
+  #+RESULTS:
+  : 'select()' returned 1:many mapping between keys and columns
+  : 'select()' returned 1:1 mapping between keys and columns
+
+Get go terms with p-value <= 0.05
+#+begin_src R :session bovine.rm :results output drawer
+go.fry %>%
+  rownames_to_column('GOID') %>%
+  filter(PValue <= 0.05) %>%
+  left_join(go.names, by='GOID') %>%
+  dplyr::select(-ends_with('.Mixed')) %>%
+  ascii(format=c('s', 'd', 's', 'g', 'g', 's', 's'))
+#+end_src
+
+#+RESULTS:
+:results:
+|     | GOID       | NGenes | Direction |  PValue | FDR | TERM                                                                                           | ONTOLOGY |
+|-----+------------+--------+-----------+---------+-----+------------------------------------------------------------------------------------------------+----------|
+|   1 | GO:0045648 |      6 | Down      | 0.00056 |   1 | positive regulation of erythrocyte differentiation                                             | BP       |
+|   2 | GO:1903598 |      3 | Down      | 0.00073 |   1 | positive regulation of gap junction assembly                                                   | BP       |
+|   3 | GO:0007507 |     20 | Down      |  0.0013 |   1 | heart development                                                                              | BP       |
+|   4 | GO:0009409 |      6 | Down      |  0.0017 |   1 | response to cold                                                                               | BP       |
+|   5 | GO:0021773 |      1 | Down      |  0.0019 |   1 | striatal medium spiny neuron differentiation                                                   | BP       |
+|   6 | GO:0035987 |      1 | Down      |  0.0019 |   1 | endodermal cell differentiation                                                                | BP       |
+|   7 | GO:0042541 |      1 | Down      |  0.0019 |   1 | hemoglobin biosynthetic process                                                                | BP       |
+|   8 | GO:0042701 |      1 | Down      |  0.0019 |   1 | progesterone secretion                                                                         | BP       |
+|   9 | GO:0043509 |      1 | Down      |  0.0019 |   1 | activin A complex                                                                              | CC       |
+|  10 | GO:0043512 |      1 | Down      |  0.0019 |   1 | inhibin A complex                                                                              | CC       |
+|  11 | GO:0046880 |      1 | Down      |  0.0019 |   1 | regulation of follicle-stimulating hormone secretion                                           | BP       |
+|  12 | GO:0048333 |      1 | Down      |  0.0019 |   1 | mesodermal cell differentiation                                                                | BP       |
+|  13 | GO:0051799 |      1 | Down      |  0.0019 |   1 | negative regulation of hair follicle development                                               | BP       |
+|  14 | GO:0070699 |      1 | Down      |  0.0019 |   1 | type II activin receptor binding                                                               | MF       |
+|  15 | GO:0097154 |      1 | Down      |  0.0019 |   1 | GABAergic neuron differentiation                                                               | BP       |
+|  16 | GO:0140768 |      2 | Down      |  0.0024 |   1 | protein ADP-ribosyltransferase-substrate adaptor activity                                      | MF       |
+|  17 | GO:0046628 |      1 | Down      |  0.0025 |   1 | positive regulation of insulin receptor signaling pathway                                      | BP       |
+|  18 | GO:0008308 |      2 | Down      |  0.0027 |   1 | voltage-gated anion channel activity                                                           | MF       |
+|  19 | GO:0001942 |      5 | Down      |  0.0039 |   1 | hair follicle development                                                                      | BP       |
+|  20 | GO:0033962 |      3 | Down      |  0.0045 |   1 | P-body assembly                                                                                | BP       |
+|  21 | GO:0005643 |      5 | Down      |  0.0047 |   1 | nuclear pore                                                                                   | CC       |
+|  22 | GO:0002882 |      1 | Down      |  0.0055 |   1 | positive regulation of chronic inflammatory response to non-antigenic stimulus                 | BP       |
+|  23 | GO:0010753 |      1 | Down      |  0.0055 |   1 | positive regulation of cGMP-mediated signaling                                                 | BP       |
+|  24 | GO:0043306 |      1 | Down      |  0.0055 |   1 | positive regulation of mast cell degranulation                                                 | BP       |
+|  25 | GO:0050693 |      2 | Down      |  0.0061 |   1 | LBD domain binding                                                                             | MF       |
+|  26 | GO:0051302 |      6 | Up        |  0.0066 |   1 | regulation of cell division                                                                    | BP       |
+|  27 | GO:0007616 |      5 | Up        |  0.0069 |   1 | long-term memory                                                                               | BP       |
+|  28 | GO:0034968 |      2 | Up        |  0.0073 |   1 | histone lysine methylation                                                                     | BP       |
+|  29 | GO:0030151 |      2 | Down      |  0.0075 |   1 | molybdenum ion binding                                                                         | MF       |
+|  30 | GO:0032793 |      2 | Up        |  0.0079 |   1 | positive regulation of CREB transcription factor activity                                      | BP       |
+|  31 | GO:0008265 |      1 | Down      |  0.0085 |   1 | Mo-molybdopterin cofactor sulfurase activity                                                   | MF       |
+|  32 | GO:0043545 |      1 | Down      |  0.0085 |   1 | molybdopterin cofactor metabolic process                                                       | BP       |
+|  33 | GO:0102867 |      1 | Down      |  0.0085 |   1 | molybdenum cofactor sulfurtransferase activity                                                 | MF       |
+|  34 | GO:0000028 |      1 | Up        |  0.0085 |   1 | ribosomal small subunit assembly                                                               | BP       |
+|  35 | GO:0005388 |      2 | Down      |  0.0087 |   1 | P-type calcium transporter activity                                                            | MF       |
+|  36 | GO:0021740 |      1 | Down      |  0.0089 |   1 | principal sensory nucleus of trigeminal nerve development                                      | BP       |
+|  37 | GO:0021960 |      1 | Down      |  0.0089 |   1 | anterior commissure morphogenesis                                                              | BP       |
+|  38 | GO:0044300 |      1 | Down      |  0.0089 |   1 | cerebellar mossy fiber                                                                         | CC       |
+|  39 | GO:0060486 |      1 | Down      |  0.0089 |   1 | club cell differentiation                                                                      | BP       |
+|  40 | GO:0060509 |      1 | Down      |  0.0089 |   1 | type I pneumocyte differentiation                                                              | BP       |
+|  41 | GO:0061141 |      1 | Down      |  0.0089 |   1 | lung ciliated cell differentiation                                                             | BP       |
+|  42 | GO:0071679 |      1 | Down      |  0.0089 |   1 | commissural neuron axon guidance                                                               | BP       |
+|  43 | GO:2000791 |      1 | Down      |  0.0089 |   1 | negative regulation of mesenchymal cell proliferation involved in lung development             | BP       |
+|  44 | GO:2000795 |      1 | Down      |  0.0089 |   1 | negative regulation of epithelial cell proliferation involved in lung morphogenesis            | BP       |
+|  45 | GO:0019953 |      2 | Down      |   0.009 |   1 | sexual reproduction                                                                            | BP       |
+|  46 | GO:0048664 |      2 | Down      |  0.0093 |   1 | neuron fate determination                                                                      | BP       |
+|  47 | GO:0008242 |      1 | Up        |  0.0096 |   1 | omega peptidase activity                                                                       | MF       |
+|  48 | GO:0070084 |      1 | Down      |   0.011 |   1 | protein initiator methionine removal                                                           | BP       |
+|  49 | GO:0006640 |      3 | Up        |   0.011 |   1 | monoacylglycerol biosynthetic process                                                          | BP       |
+|  50 | GO:0001754 |      1 | Down      |   0.011 |   1 | eye photoreceptor cell differentiation                                                         | BP       |
+|  51 | GO:0033210 |      1 | Down      |   0.011 |   1 | leptin-mediated signaling pathway                                                              | BP       |
+|  52 | GO:0042755 |      1 | Down      |   0.011 |   1 | eating behavior                                                                                | BP       |
+|  53 | GO:0044320 |      1 | Down      |   0.011 |   1 | cellular response to leptin stimulus                                                           | BP       |
+|  54 | GO:0048708 |      1 | Down      |   0.011 |   1 | astrocyte differentiation                                                                      | BP       |
+|  55 | GO:0060019 |      1 | Down      |   0.011 |   1 | radial glial cell differentiation                                                              | BP       |
+|  56 | GO:0070102 |      1 | Down      |   0.011 |   1 | interleukin-6-mediated signaling pathway                                                       | BP       |
+|  57 | GO:0017060 |      1 | Up        |   0.012 |   1 | 3-galactosyl-N-acetylglucosaminide 4-alpha-L-fucosyltransferase activity                       | MF       |
+|  58 | GO:0097009 |      8 | Down      |   0.012 |   1 | energy homeostasis                                                                             | BP       |
+|  59 | GO:2000637 |      5 | Down      |   0.012 |   1 | positive regulation of miRNA-mediated gene silencing                                           | BP       |
+|  60 | GO:0051260 |     29 | Up        |   0.013 |   1 | protein homooligomerization                                                                    | BP       |
+|  61 | GO:0042420 |      1 | Down      |   0.014 |   1 | dopamine catabolic process                                                                     | BP       |
+|  62 | GO:0017083 |      2 | Up        |   0.014 |   1 | 4-galactosyl-N-acetylglucosaminide 3-alpha-L-fucosyltransferase activity                       | MF       |
+|  63 | GO:0008409 |      1 | Up        |   0.014 |   1 | 5'-3' exonuclease activity                                                                     | MF       |
+|  64 | GO:0034353 |      1 | Up        |   0.014 |   1 | mRNA 5'-diphosphatase activity                                                                 | MF       |
+|  65 | GO:0050779 |      1 | Up        |   0.014 |   1 | RNA destabilization                                                                            | BP       |
+|  66 | GO:0071028 |      1 | Up        |   0.014 |   1 | nuclear mRNA surveillance                                                                      | BP       |
+|  67 | GO:0034774 |      1 | Up        |   0.014 |   1 | secretory granule lumen                                                                        | CC       |
+|  68 | GO:0090277 |      1 | Up        |   0.014 |   1 | positive regulation of peptide hormone secretion                                               | BP       |
+|  69 | GO:1900738 |      1 | Up        |   0.014 |   1 | positive regulation of phospholipase C-activating G protein-coupled receptor signaling pathway | BP       |
+|  70 | GO:1903817 |      1 | Up        |   0.014 |   1 | negative regulation of voltage-gated potassium channel activity                                | BP       |
+|  71 | GO:1905151 |      1 | Up        |   0.014 |   1 | negative regulation of voltage-gated sodium channel activity                                   | BP       |
+|  72 | GO:0007041 |      3 | Down      |   0.015 |   1 | lysosomal transport                                                                            | BP       |
+|  73 | GO:0044281 |      1 | Down      |   0.015 |   1 | small molecule metabolic process                                                               | BP       |
+|  74 | GO:0070934 |      3 | Down      |   0.016 |   1 | CRD-mediated mRNA stabilization                                                                | BP       |
+|  75 | GO:0008526 |      2 | Up        |   0.016 |   1 | phosphatidylinositol transfer activity                                                         | MF       |
+|  76 | GO:0120019 |      2 | Up        |   0.016 |   1 | phosphatidylcholine transfer activity                                                          | MF       |
+|  77 | GO:0070828 |      2 | Down      |   0.017 |   1 | heterochromatin organization                                                                   | BP       |
+|  78 | GO:0019934 |      4 | Down      |   0.017 |   1 | cGMP-mediated signaling                                                                        | BP       |
+|  79 | GO:0006357 |     39 | Down      |   0.017 |   1 | regulation of transcription by RNA polymerase II                                               | BP       |
+|  80 | GO:0045722 |      2 | Down      |   0.017 |   1 | positive regulation of gluconeogenesis                                                         | BP       |
+|  81 | GO:0045347 |      1 | Down      |   0.018 |   1 | negative regulation of MHC class II biosynthetic process                                       | BP       |
+|  82 | GO:0004999 |      1 | Down      |   0.018 |   1 | vasoactive intestinal polypeptide receptor activity                                            | MF       |
+|  83 | GO:0055089 |      4 | Up        |   0.018 |   1 | fatty acid homeostasis                                                                         | BP       |
+|  84 | GO:0051452 |      1 | Down      |   0.019 |   1 | intracellular pH reduction                                                                     | BP       |
+|  85 | GO:0000086 |      6 | Up        |   0.019 |   1 | G2/M transition of mitotic cell cycle                                                          | BP       |
+|  86 | GO:0016035 |      1 | Up        |    0.02 |   1 | zeta DNA polymerase complex                                                                    | CC       |
+|  87 | GO:0042772 |      1 | Up        |    0.02 |   1 | DNA damage response, signal transduction resulting in transcription                            | BP       |
+|  88 | GO:0071795 |      1 | Down      |    0.02 |   1 | K11-linked polyubiquitin modification-dependent protein binding                                | MF       |
+|  89 | GO:0043405 |      3 | Down      |    0.02 |   1 | regulation of MAP kinase activity                                                              | BP       |
+|  90 | GO:0071455 |      2 | Down      |    0.02 |   1 | cellular response to hyperoxia                                                                 | BP       |
+|  91 | GO:1903942 |      2 | Up        |    0.02 |   1 | positive regulation of respiratory gaseous exchange                                            | BP       |
+|  92 | GO:0034383 |      5 | Up        |    0.02 |   1 | low-density lipoprotein particle clearance                                                     | BP       |
+|  93 | GO:0031214 |      9 | Down      |   0.022 |   1 | biomineral tissue development                                                                  | BP       |
+|  94 | GO:0000281 |     12 | Up        |   0.022 |   1 | mitotic cytokinesis                                                                            | BP       |
+|  95 | GO:0060219 |      1 | Up        |   0.023 |   1 | camera-type eye photoreceptor cell differentiation                                             | BP       |
+|  96 | GO:0061298 |      1 | Up        |   0.023 |   1 | retina vasculature development in camera-type eye                                              | BP       |
+|  97 | GO:0031781 |      1 | Up        |   0.023 |   1 | type 3 melanocortin receptor binding                                                           | MF       |
+|  98 | GO:0031782 |      1 | Up        |   0.023 |   1 | type 4 melanocortin receptor binding                                                           | MF       |
+|  99 | GO:0032098 |      1 | Up        |   0.023 |   1 | regulation of appetite                                                                         | BP       |
+| 100 | GO:0033059 |      1 | Up        |   0.023 |   1 | cellular pigmentation                                                                          | BP       |
+| 101 | GO:0070996 |      1 | Up        |   0.023 |   1 | type 1 melanocortin receptor binding                                                           | MF       |
+| 102 | GO:0140668 |      1 | Up        |   0.023 |   1 | positive regulation of oxytocin production                                                     | BP       |
+| 103 | GO:1990680 |      1 | Up        |   0.023 |   1 | response to melanocyte-stimulating hormone                                                     | BP       |
+| 104 | GO:0106008 |      1 | Down      |   0.023 |   1 | 2-oxoglutaramate amidase activity                                                              | MF       |
+| 105 | GO:1903670 |      2 | Down      |   0.024 |   1 | regulation of sprouting angiogenesis                                                           | BP       |
+| 106 | GO:0045064 |      2 | Up        |   0.024 |   1 | T-helper 2 cell differentiation                                                                | BP       |
+| 107 | GO:0043011 |      3 | Up        |   0.024 |   1 | myeloid dendritic cell differentiation                                                         | BP       |
+| 108 | GO:1903546 |      2 | Up        |   0.025 |   1 | protein localization to photoreceptor outer segment                                            | BP       |
+| 109 | GO:0006820 |      1 | Down      |   0.025 |   1 | anion transport                                                                                | BP       |
+| 110 | GO:0042382 |      3 | Up        |   0.025 |   1 | paraspeckles                                                                                   | CC       |
+| 111 | GO:0006071 |      2 | Up        |   0.026 |   1 | glycerol metabolic process                                                                     | BP       |
+| 112 | GO:0004622 |      6 | Up        |   0.026 |   1 | lysophospholipase activity                                                                     | MF       |
+| 113 | GO:0070873 |      2 | Up        |   0.026 |   1 | regulation of glycogen metabolic process                                                       | BP       |
+| 114 | GO:0004144 |      2 | Up        |   0.027 |   1 | diacylglycerol O-acyltransferase activity                                                      | MF       |
+| 115 | GO:0019432 |      2 | Up        |   0.027 |   1 | triglyceride biosynthetic process                                                              | BP       |
+| 116 | GO:0050252 |      2 | Up        |   0.027 |   1 | retinol O-fatty-acyltransferase activity                                                       | MF       |
+| 117 | GO:0031685 |      1 | Down      |   0.027 |   1 | adenosine receptor binding                                                                     | MF       |
+| 118 | GO:1990756 |     11 | Down      |   0.027 |   1 | ubiquitin ligase-substrate adaptor activity                                                    | MF       |
+| 119 | GO:2000253 |      1 | Up        |   0.029 |   1 | positive regulation of feeding behavior                                                        | BP       |
+| 120 | GO:0060397 |      2 | Down      |    0.03 |   1 | growth hormone receptor signaling pathway via JAK-STAT                                         | BP       |
+| 121 | GO:0046983 |     22 | Down      |    0.03 |   1 | protein dimerization activity                                                                  | MF       |
+| 122 | GO:0005879 |     15 | Up        |   0.031 |   1 | axonemal microtubule                                                                           | CC       |
+| 123 | GO:1903146 |      2 | Down      |   0.031 |   1 | regulation of autophagy of mitochondrion                                                       | BP       |
+| 124 | GO:0071404 |      7 | Up        |   0.031 |   1 | cellular response to low-density lipoprotein particle stimulus                                 | BP       |
+| 125 | GO:0004649 |      2 | Down      |   0.031 |   1 | poly(ADP-ribose) glycohydrolase activity                                                       | MF       |
+| 126 | GO:0003846 |      1 | Up        |   0.031 |   1 | 2-acylglycerol O-acyltransferase activity                                                      | MF       |
+| 127 | GO:0035336 |      1 | Up        |   0.031 |   1 | long-chain fatty-acyl-CoA metabolic process                                                    | BP       |
+| 128 | GO:0071400 |      1 | Up        |   0.031 |   1 | cellular response to oleic acid                                                                | BP       |
+| 129 | GO:0097006 |      1 | Up        |   0.031 |   1 | regulation of plasma lipoprotein particle levels                                               | BP       |
+| 130 | GO:0007260 |      2 | Down      |   0.031 |   1 | tyrosine phosphorylation of STAT protein                                                       | BP       |
+| 131 | GO:0097345 |      5 | Down      |   0.032 |   1 | mitochondrial outer membrane permeabilization                                                  | BP       |
+| 132 | GO:1990459 |      3 | Up        |   0.032 |   1 | transferrin receptor binding                                                                   | MF       |
+| 133 | GO:0036143 |      1 | Down      |   0.033 |   1 | kringle domain binding                                                                         | MF       |
+| 134 | GO:0005501 |      1 | Up        |   0.033 |   1 | retinoid binding                                                                               | MF       |
+| 135 | GO:0004176 |      2 | Down      |   0.033 |   1 | ATP-dependent peptidase activity                                                               | MF       |
+| 136 | GO:0030878 |      5 | Down      |   0.033 |   1 | thyroid gland development                                                                      | BP       |
+| 137 | GO:0006816 |     10 | Down      |   0.033 |   1 | calcium ion transport                                                                          | BP       |
+| 138 | GO:0004693 |      4 | Down      |   0.034 |   1 | cyclin-dependent protein serine/threonine kinase activity                                      | MF       |
+| 139 | GO:0044770 |      2 | Up        |   0.034 |   1 | cell cycle phase transition                                                                    | BP       |
+| 140 | GO:0010572 |      1 | Up        |   0.035 |   1 | positive regulation of platelet activation                                                     | BP       |
+| 141 | GO:0034478 |      1 | Up        |   0.035 |   1 | phosphatidylglycerol catabolic process                                                         | BP       |
+| 142 | GO:0004550 |      6 | Up        |   0.035 |   1 | nucleoside diphosphate kinase activity                                                         | MF       |
+| 143 | GO:0043137 |      1 | Up        |   0.035 |   1 | DNA replication, removal of RNA primer                                                         | BP       |
+| 144 | GO:0008294 |      1 | Up        |   0.036 |   1 | calcium- and calmodulin-responsive adenylate cyclase activity                                  | MF       |
+| 145 | GO:0099061 |      1 | Up        |   0.036 |   1 | integral component of postsynaptic density membrane                                            | CC       |
+| 146 | GO:0150076 |      1 | Up        |   0.036 |   1 | neuroinflammatory response                                                                     | BP       |
+| 147 | GO:1900273 |      1 | Up        |   0.036 |   1 | positive regulation of long-term synaptic potentiation                                         | BP       |
+| 148 | GO:0046339 |      3 | Up        |   0.036 |   1 | diacylglycerol metabolic process                                                               | BP       |
+| 149 | GO:0031648 |     12 | Up        |   0.036 |   1 | protein destabilization                                                                        | BP       |
+| 150 | GO:0072539 |      1 | Up        |   0.036 |   1 | T-helper 17 cell differentiation                                                               | BP       |
+| 151 | GO:0015936 |      2 | Down      |   0.036 |   1 | coenzyme A metabolic process                                                                   | BP       |
+| 152 | GO:1902993 |      1 | Down      |   0.036 |   1 | positive regulation of amyloid precursor protein catabolic process                             | BP       |
+| 153 | GO:0034394 |      8 | Down      |   0.037 |   1 | protein localization to cell surface                                                           | BP       |
+| 154 | GO:2001241 |      3 | Down      |   0.037 |   1 | positive regulation of extrinsic apoptotic signaling pathway in absence of ligand              | BP       |
+| 155 | GO:0048863 |      7 | Up        |   0.037 |   1 | stem cell differentiation                                                                      | BP       |
+| 156 | GO:0090190 |      2 | Down      |   0.038 |   1 | positive regulation of branching involved in ureteric bud morphogenesis                        | BP       |
+| 157 | GO:0050908 |      3 | Up        |   0.038 |   1 | detection of light stimulus involved in visual perception                                      | BP       |
+| 158 | GO:2000147 |      3 | Up        |   0.038 |   1 | positive regulation of cell motility                                                           | BP       |
+| 159 | GO:0006493 |      7 | Up        |   0.038 |   1 | protein O-linked glycosylation                                                                 | BP       |
+| 160 | GO:0071425 |      4 | Down      |   0.039 |   1 | hematopoietic stem cell proliferation                                                          | BP       |
+| 161 | GO:0050435 |      3 | Up        |   0.039 |   1 | amyloid-beta metabolic process                                                                 | BP       |
+| 162 | GO:0050861 |      2 | Up        |   0.039 |   1 | positive regulation of B cell receptor signaling pathway                                       | BP       |
+| 163 | GO:0019834 |      1 | Down      |    0.04 |   1 | phospholipase A2 inhibitor activity                                                            | MF       |
+| 164 | GO:0015760 |      2 | Up        |    0.04 |   1 | glucose-6-phosphate transport                                                                  | BP       |
+| 165 | GO:1904888 |      3 | Down      |    0.04 |   1 | cranial skeletal system development                                                            | BP       |
+| 166 | GO:0072557 |      1 | Up        |   0.041 |   1 | IPAF inflammasome complex                                                                      | CC       |
+| 167 | GO:0030521 |      2 | Down      |   0.041 |   1 | androgen receptor signaling pathway                                                            | BP       |
+| 168 | GO:0031430 |      1 | Down      |   0.041 |   1 | M band                                                                                         | CC       |
+| 169 | GO:0120187 |      2 | Up        |   0.042 |   1 | positive regulation of protein localization to chromatin                                       | BP       |
+| 170 | GO:0045836 |      1 | Up        |   0.042 |   1 | positive regulation of meiotic nuclear division                                                | BP       |
+| 171 | GO:0070201 |      1 | Up        |   0.042 |   1 | regulation of establishment of protein localization                                            | BP       |
+| 172 | GO:0034115 |      3 | Up        |   0.042 |   1 | negative regulation of heterotypic cell-cell adhesion                                          | BP       |
+| 173 | GO:1904322 |      3 | Up        |   0.042 |   1 | cellular response to forskolin                                                                 | BP       |
+| 174 | GO:1990357 |      2 | Down      |   0.043 |   1 | terminal web                                                                                   | CC       |
+| 175 | GO:0000118 |      2 | Up        |   0.044 |   1 | histone deacetylase complex                                                                    | CC       |
+| 176 | GO:0090267 |      2 | Up        |   0.044 |   1 | positive regulation of mitotic cell cycle spindle assembly checkpoint                          | BP       |
+| 177 | GO:0010745 |      1 | Up        |   0.044 |   1 | negative regulation of macrophage derived foam cell differentiation                            | BP       |
+| 178 | GO:0030853 |      1 | Up        |   0.044 |   1 | negative regulation of granulocyte differentiation                                             | BP       |
+| 179 | GO:0033034 |      1 | Up        |   0.044 |   1 | positive regulation of myeloid cell apoptotic process                                          | BP       |
+| 180 | GO:0033691 |      1 | Up        |   0.044 |   1 | sialic acid binding                                                                            | MF       |
+| 181 | GO:0045650 |      1 | Up        |   0.044 |   1 | negative regulation of macrophage differentiation                                              | BP       |
+| 182 | GO:0045923 |      1 | Up        |   0.044 |   1 | positive regulation of fatty acid metabolic process                                            | BP       |
+| 183 | GO:0050805 |      1 | Up        |   0.044 |   1 | negative regulation of synaptic transmission                                                   | BP       |
+| 184 | GO:0090317 |      1 | Up        |   0.044 |   1 | negative regulation of intracellular protein transport                                         | BP       |
+| 185 | GO:0110113 |      1 | Up        |   0.044 |   1 | positive regulation of lipid transporter activity                                              | BP       |
+| 186 | GO:2000279 |      1 | Up        |   0.044 |   1 | negative regulation of DNA biosynthetic process                                                | BP       |
+| 187 | GO:2000467 |      1 | Up        |   0.044 |   1 | positive regulation of glycogen (starch) synthase activity                                     | BP       |
+| 188 | GO:2000478 |      1 | Up        |   0.044 |   1 | positive regulation of metanephric podocyte development                                        | BP       |
+| 189 | GO:2000534 |      1 | Up        |   0.044 |   1 | positive regulation of renal albumin absorption                                                | BP       |
+| 190 | GO:2000584 |      1 | Up        |   0.044 |   1 | negative regulation of platelet-derived growth factor receptor-alpha signaling pathway         | BP       |
+| 191 | GO:2000590 |      1 | Up        |   0.044 |   1 | negative regulation of metanephric mesenchymal cell migration                                  | BP       |
+| 192 | GO:0051258 |      4 | Up        |   0.045 |   1 | protein polymerization                                                                         | BP       |
+| 193 | GO:0001833 |      3 | Down      |   0.045 |   1 | inner cell mass cell proliferation                                                             | BP       |
+| 194 | GO:0051651 |      1 | Down      |   0.045 |   1 | maintenance of location in cell                                                                | BP       |
+| 195 | GO:1905379 |      1 | Down      |   0.045 |   1 | beta-N-acetylhexosaminidase complex                                                            | CC       |
+| 196 | GO:0001933 |     13 | Up        |   0.046 |   1 | negative regulation of protein phosphorylation                                                 | BP       |
+| 197 | GO:0060279 |      2 | Down      |   0.046 |   1 | positive regulation of ovulation                                                               | BP       |
+| 198 | GO:0001837 |      6 | Down      |   0.047 |   1 | epithelial to mesenchymal transition                                                           | BP       |
+| 199 | GO:2001256 |      3 | Up        |   0.047 |   1 | regulation of store-operated calcium entry                                                     | BP       |
+| 200 | GO:0043970 |      1 | Up        |   0.047 |   1 | histone H3-K9 acetylation                                                                      | BP       |
+| 201 | GO:0050830 |     11 | Up        |   0.048 |   1 | defense response to Gram-positive bacterium                                                    | BP       |
+| 202 | GO:0051603 |      3 | Up        |   0.048 |   1 | proteolysis involved in protein catabolic process                                              | BP       |
+| 203 | GO:0003085 |      2 | Up        |   0.048 |   1 | negative regulation of systemic arterial blood pressure                                        | BP       |
+| 204 | GO:0032693 |      1 | Down      |   0.048 |   1 | negative regulation of interleukin-10 production                                               | BP       |
+| 205 | GO:0034141 |      3 | Down      |   0.049 |   1 | positive regulation of toll-like receptor 3 signaling pathway                                  | BP       |
+| 206 | GO:0009154 |      1 | Up        |   0.049 |   1 | purine ribonucleotide catabolic process                                                        | BP       |
+| 207 | GO:0016929 |      1 | Up        |   0.049 |   1 | deSUMOylase activity                                                                           | MF       |
+| 208 | GO:0036505 |      1 | Up        |   0.049 |   1 | prosaposin receptor activity                                                                   | MF       |
+| 209 | GO:0042310 |      2 | Down      |   0.049 |   1 | vasoconstriction                                                                               | BP       |
+| 210 | GO:0036435 |      2 | Down      |   0.049 |   1 | K48-linked polyubiquitin modification-dependent protein binding                                | MF       |
+| 211 | GO:0065010 |      2 | Down      |   0.049 |   1 | extracellular membrane-bounded organelle                                                       | CC       |
+| 212 | GO:0090049 |      1 | Down      |    0.05 |   1 | regulation of cell migration involved in sprouting angiogenesis                                | BP       |
+| 213 | GO:1903026 |      1 | Down      |    0.05 |   1 | negative regulation of RNA polymerase II regulatory region sequence-specific DNA binding       | BP       |
+| 214 | GO:1903378 |      1 | Down      |    0.05 |   1 | positive regulation of oxidative stress-induced neuron intrinsic apoptotic signaling pathway   | BP       |
+| 215 | GO:1903955 |      1 | Down      |    0.05 |   1 | positive regulation of protein targeting to mitochondrion                                      | BP       |
+| 216 | GO:1990452 |      1 | Down      |    0.05 |   1 | Parkin-FBXW7-Cul1 ubiquitin ligase complex                                                     | CC       |
+| 217 | GO:0043849 |      1 | Down      |    0.05 |   1 | Ras palmitoyltransferase activity                                                              | MF       |
+:end:
+
+** Session Info
+#+begin_src R :session bovine.rm :results output verbatim
+sessionInfo()
+#+end_src
+
+#+RESULTS:
+#+begin_example
+R version 4.2.0 (2022-04-22)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: CentOS Linux 7 (Core)
+
+Matrix products: default
+BLAS:   /apps/r-4.2.0/lib64/R/lib/libRblas.so
+LAPACK: /apps/r-4.2.0/lib64/R/lib/libRlapack.so
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C
+ [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8
+ [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C
+ [9] LC_ADDRESS=C               LC_TELEPHONE=C
+[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C
+
+attached base packages:
+[1] stats4    stats     graphics  grDevices utils     datasets  methods
+[8] base
+
+other attached packages:
+ [1] pathview_1.38.0      GO.db_3.16.0         org.Bt.eg.db_3.16.0
+ [4] AnnotationDbi_1.60.0 IRanges_2.32.0       S4Vectors_0.36.1
+ [7] Biobase_2.58.0       BiocGenerics_0.44.0  cowplot_1.1.1
+[10] ascii_2.4            ggrepel_0.9.3        forcats_1.0.0
+[13] stringr_1.5.0        dplyr_1.1.0          purrr_1.0.1
+[16] readr_2.1.3          tidyr_1.3.0          tibble_3.1.8
+[19] ggplot2_3.4.0        tidyverse_1.3.2      data.table_1.14.6
+[22] tximport_1.26.1      statmod_1.5.0        edgeR_3.40.2
+[25] limma_3.54.1
+
+loaded via a namespace (and not attached):
+ [1] bitops_1.0-7           fs_1.6.0               lubridate_1.9.1
+ [4] bit64_4.0.5            RColorBrewer_1.1-3     httr_1.4.4
+ [7] GenomeInfoDb_1.34.9    Rgraphviz_2.42.0       tools_4.2.0
+[10] backports_1.4.1        utf8_1.2.3             R6_2.5.1
+[13] DBI_1.1.3              colorspace_2.1-0       withr_2.5.0
+[16] tidyselect_1.2.0       bit_4.0.5              compiler_4.2.0
+[19] graph_1.76.0           cli_3.6.0              rvest_1.0.3
+[22] xml2_1.3.3             labeling_0.4.2         KEGGgraph_1.58.3
+[25] scales_1.2.1           XVector_0.38.0         pkgconfig_2.0.3
+[28] dbplyr_2.3.0           fastmap_1.1.0          rlang_1.0.6
+[31] readxl_1.4.1           RSQLite_2.3.0          farver_2.1.1
+[34] generics_0.1.3         jsonlite_1.8.4         vroom_1.6.1
+[37] googlesheets4_1.0.1    RCurl_1.98-1.10        magrittr_2.0.3
+[40] GenomeInfoDbData_1.2.9 Matrix_1.4-1           Rcpp_1.0.10
+[43] munsell_0.5.0          fansi_1.0.4            lifecycle_1.0.3
+[46] stringi_1.7.12         zlibbioc_1.44.0        org.Hs.eg.db_3.16.0
+[49] grid_4.2.0             blob_1.2.3             parallel_4.2.0
+[52] crayon_1.5.2           lattice_0.20-45        Biostrings_2.66.0
+[55] haven_2.5.1            splines_4.2.0          hms_1.1.2
+[58] KEGGREST_1.38.0        locfit_1.5-9.7         pillar_1.8.1
+[61] XML_3.99-0.13          reprex_2.0.2           glue_1.6.2
+[64] modelr_0.1.10          vctrs_0.5.2            png_0.1-8
+[67] tzdb_0.3.0             cellranger_1.1.0       gtable_0.3.1
+[70] assertthat_0.2.1       cachem_1.0.6           broom_1.0.3
+[73] survival_3.3-1         googledrive_2.0.0      gargle_1.3.0
+[76] memoise_2.0.1          timechange_0.2.0       ellipsis_0.3.2
 #+end_example
 
 #  LocalWords:  transcriptome
