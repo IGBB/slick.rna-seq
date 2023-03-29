@@ -947,13 +947,37 @@ txi <- tximport(files, type = "salmon", tx2gene = tx2gene)
   #+end_src
 
   #+RESULTS:
-  : reading in files with read_tsv
-  : 1 2 3 4 5 6 7 8 9 10 11 12 13
-  : removing duplicated transcript rows from tx2gene
-  : transcripts missing from tx2gene: 12558
-  : summarizing abundance
-  : summarizing counts
-  : summarizing length
+  #+begin_example
+  Loading required package: limma
+  data.table 1.14.6 using 4 threads (see ?getDTthreads).  Latest news: r-datatable.com
+  ── [1mAttaching packages[22m ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.2 ──
+  [32m✔[39m [34mggplot2[39m 3.4.0     [32m✔[39m [34mpurrr  [39m 1.0.1
+  [32m✔[39m [34mtibble [39m 3.1.8     [32m✔[39m [34mdplyr  [39m 1.1.0
+  [32m✔[39m [34mtidyr  [39m 1.3.0     [32m✔[39m [34mstringr[39m 1.5.0
+  [32m✔[39m [34mreadr  [39m 2.1.3     [32m✔[39m [34mforcats[39m 1.0.0
+  ── [1mConflicts[22m ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+  [31m✖[39m [34mdplyr[39m::[32mbetween()[39m   masks [34mdata.table[39m::between()
+  [31m✖[39m [34mdplyr[39m::[32mfilter()[39m    masks [34mstats[39m::filter()
+  [31m✖[39m [34mdplyr[39m::[32mfirst()[39m     masks [34mdata.table[39m::first()
+  [31m✖[39m [34mdplyr[39m::[32mlag()[39m       masks [34mstats[39m::lag()
+  [31m✖[39m [34mdplyr[39m::[32mlast()[39m      masks [34mdata.table[39m::last()
+  [31m✖[39m [34mpurrr[39m::[32mtranspose()[39m masks [34mdata.table[39m::transpose()
+
+  Attaching package: ‘ascii’
+
+  The following object is masked from ‘package:tidyr’:
+
+      expand
+  |--------------------------------------------------|
+  |==================================================|
+  reading in files with read_tsv
+  1 2 3 4 5 6 7 8 9 10 11 12 13
+  removing duplicated transcript rows from tx2gene
+  transcripts missing from tx2gene: 12558
+  summarizing abundance
+  summarizing counts
+  summarizing length
+  #+end_example
 
 ** Normalize counts, Filter Genes, and Estimate Dispersions
 #+begin_src R :session bovine.rm :results output
@@ -1422,7 +1446,43 @@ pathview(pathway.id=pathway,
 - bta00340 :: Histidine metabolism
   [[./bta00340.pathview.png]]
 
+- bta04530 :: Tight junction
+  #+CALL: pathview.rm(pathway="04530")
 
+  #+RESULTS:
+  #+begin_example
+
+  ##############################################################################
+  Pathview is an open source software package distributed under GNU General
+  Public License version 3 (GPLv3). Details of GPLv3 is available at
+  http://www.gnu.org/licenses/gpl-3.0.html. Particullary, users are required to
+  formally cite the original Pathview paper (not just mention it) in publications
+  or products. For details, do citation("pathview") within R.
+
+  The pathview downloads and uses KEGG data. Non-academic uses may require a KEGG
+  license agreement (details at http://www.kegg.jp/kegg/legal.html).
+  ##############################################################################
+  Info: Downloading xml files for bta04530, 1/1 pathways..
+  Info: Downloading png files for bta04530, 1/1 pathways..
+  Loading required namespace: org.Bt.eg.db
+
+  'select()' returned 1:1 mapping between keys and columns
+  Info: Working in directory /home/maa146/projects/zully.cow-rnaseq
+  Info: Writing image file bta04530.pathview.png
+  #+end_example
+
+  [[./bta04530.pathview.png]]
+- bta04012 :: ErbB signaling pathway
+  #+CALL: pathview.rm(pathway="04012")
+
+  #+RESULTS:
+  : Info: Downloading xml files for bta04012, 1/1 pathways..
+  : Info: Downloading png files for bta04012, 1/1 pathways..
+  : 'select()' returned 1:1 mapping between keys and columns
+  : Info: Working in directory /home/maa146/projects/zully.cow-rnaseq
+  : Info: Writing image file bta04012.pathview.png
+
+  [[./bta04012.pathview.png]]
 ** GO
   #+begin_src R :session bovine.rm :results output discard
 library(org.Bt.eg.db)
@@ -1446,8 +1506,91 @@ go.fry <- fry(y, go.sets, design)
   #+end_src
 
   #+RESULTS:
-  : 'select()' returned 1:many mapping between keys and columns
-  : 'select()' returned 1:1 mapping between keys and columns
+  #+begin_example
+  Loading required package: AnnotationDbi
+  Loading required package: stats4
+  Loading required package: BiocGenerics
+
+  Attaching package: ‘BiocGenerics’
+
+  The following objects are masked from ‘package:dplyr’:
+
+      combine, intersect, setdiff, union
+
+  The following object is masked from ‘package:limma’:
+
+      plotMA
+
+  The following objects are masked from ‘package:stats’:
+
+      IQR, mad, sd, var, xtabs
+
+  The following objects are masked from ‘package:base’:
+
+      anyDuplicated, aperm, append, as.data.frame, basename, cbind,
+      colnames, dirname, do.call, duplicated, eval, evalq, Filter, Find,
+      get, grep, grepl, intersect, is.unsorted, lapply, Map, mapply,
+      match, mget, order, paste, pmax, pmax.int, pmin, pmin.int,
+      Position, rank, rbind, Reduce, rownames, sapply, setdiff, sort,
+      table, tapply, union, unique, unsplit, which.max, which.min
+
+  Loading required package: Biobase
+  Welcome to Bioconductor
+
+      Vignettes contain introductory material; view with
+      'browseVignettes()'. To cite Bioconductor, see
+      'citation("Biobase")', and for packages 'citation("pkgname")'.
+
+  Loading required package: IRanges
+  Loading required package: S4Vectors
+
+  Attaching package: ‘S4Vectors’
+
+  The following object is masked from ‘package:ascii’:
+
+      expand
+
+  The following objects are masked from ‘package:dplyr’:
+
+      first, rename
+
+  The following object is masked from ‘package:tidyr’:
+
+      expand
+
+  The following objects are masked from ‘package:data.table’:
+
+      first, second
+
+  The following objects are masked from ‘package:base’:
+
+      expand.grid, I, unname
+
+
+  Attaching package: ‘IRanges’
+
+  The following objects are masked from ‘package:dplyr’:
+
+      collapse, desc, slice
+
+  The following object is masked from ‘package:purrr’:
+
+      reduce
+
+  The following object is masked from ‘package:data.table’:
+
+      shift
+
+
+  Attaching package: ‘AnnotationDbi’
+
+  The following object is masked from ‘package:dplyr’:
+
+      select
+
+  'select()' returned 1:many mapping between keys and columns
+  'select()' returned 1:1 mapping between keys and columns
+  #+end_example
 
 Get go terms with p-value <= 0.05
 #+begin_src R :session bovine.rm :results output drawer
@@ -1681,6 +1824,239 @@ go.fry %>%
 | 216 | GO:1990452 |      1 | Down      |    0.05 |   1 | Parkin-FBXW7-Cul1 ubiquitin ligase complex                                                     | CC       |
 | 217 | GO:0043849 |      1 | Down      |    0.05 |   1 | Ras palmitoyltransferase activity                                                              | MF       |
 :end:
+
+
+*** Heatmaps
+
+#+name: interest-go.rm
+- GO:0007507 :: heart development
+- GO:0045648 :: positive regulation of erythrocyte differentiation
+- GO:0007507 :: heart development
+- GO:0009409 :: response to cold
+- GO:0001942 :: hair follicle development
+- GO:0097009 :: energy homeostasis
+- GO:0051260 :: protein homooligomerization
+- GO:0140668 :: positive regulation of oxytocin production
+- GO:0060397 :: growth hormone receptor signaling pathway via JAK-STAT
+- GO:0006816 :: calcium ion transport
+- GO:0050830 :: defense response to Gram-positive bacterium
+- GO:0003085 :: negative regulation of systemic arterial blood pressure
+- GO:0042310 :: vasoconstriction
+- GO:0051302 :: regulation of cell division
+
+#+header: :results output org
+#+begin_src R :session bovine.rm :var go.terms.of.interest=interest-go.rm
+
+counts.per.million <- cpm(y) %>%
+  as.data.frame %>%
+  rownames_to_column("GeneID")
+
+go.data <- go.terms.of.interest %>%
+  separate(V1, into=c('id', 'term'), sep=" :: ") %>%
+  mutate(name = paste(id, term, sep=' - ')) %>%
+  pull(id, name=name) %>%
+  lapply(function(x){
+    filter(counts.per.million, GeneID %in% go.sets[[x]]) %>%
+      left_join(desc, by="GeneID")
+    })
+
+
+ mapply(function(data, name) ascii(data, name=name), go.data, names(go.data), SIMPLIFY = F)
+
+
+## go.plots <- mapply(function(data, name) {
+##   gather(data, -GeneID, key='sample', value='cpm') %>%
+##   left_join(desc, by="GeneID")  %>%
+##     ggplot(aes(sample, product, fill=cpm)) +
+##     geom_tile() +
+##     ggtitle(name)
+## }, go.data, names(go.data), SIMPLIFY = F)
+#+end_src
+
+#+RESULTS:
+$`GO:0007507 - heart development`
+|    | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene    | product                                                                                               |
+|----+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+---------+-------------------------------------------------------------------------------------------------------|
+| 1  | 280939 | 16.94      | 14.04      | 20.79      | 11.52      | 16.07      | 14.08      | 15.52     | 13.27   | 21.43   | 11.18   | 29.90   | 18.78   | 16.79   | TEK     | TEK receptor tyrosine kinase                                                                          |
+| 2  | 281134 | 1.86       | 3.77       | 6.49       | 2.30       | 5.05       | 6.06       | 4.63      | 1.66    | 4.81    | 2.00    | 2.56    | 3.78    | 3.95    | ECE2    | endothelin converting enzyme 2%2C transcript variant 2a                                               |
+| 3  | 281193 | 7.28       | 10.21      | 6.89       | 10.15      | 5.37       | 7.58       | 6.03      | 10.50   | 7.01    | 12.63   | 8.67    | 5.40    | 6.48    | GJA1    | gap junction protein alpha 1                                                                          |
+| 4  | 281270 | 2.70       | 1.46       | 1.59       | 4.59       | 1.34       | 2.90       | 3.14      | 3.79    | 1.18    | 4.91    | 3.98    | 5.02    | 3.18    | HOPX    | HOP homeobox%2C transcript variant X3                                                                 |
+| 5  | 281733 | 5.07       | 3.13       | 3.26       | 8.76       | 4.79       | 7.57       | 6.95      | 9.17    | 4.72    | 5.98    | 5.80    | 4.56    | 9.08    | CXADR   | CXADR%2C Ig-like cell adhesion molecule%2C transcript variant X2                                      |
+| 6  | 282321 | 12.91      | 13.52      | 6.38       | 13.61      | 9.82       | 12.60      | 13.43     | 16.22   | 11.38   | 13.84   | 15.60   | 8.61    | 11.73   | PPP3R1  | protein phosphatase 3 regulatory subunit B%2C alpha                                                   |
+| 7  | 282382 | 28.25      | 33.40      | 32.41      | 22.80      | 36.04      | 41.62      | 34.63     | 29.67   | 37.23   | 25.04   | 30.00   | 26.82   | 34.54   | TGFBR1  | transforming growth factor beta receptor 1%2C transcript variant X2                                   |
+| 8  | 282682 | 96.48      | 118.55     | 104.65     | 58.00      | 113.50     | 115.97     | 96.90     | 82.98   | 118.92  | 63.92   | 101.75  | 145.76  | 110.85  | GRK2    | G protein-coupled receptor kinase 2%2C transcript variant X1                                          |
+| 9  | 338068 | 13.62      | 12.41      | 7.58       | 17.67      | 10.74      | 12.82      | 10.20     | 19.40   | 10.65   | 21.30   | 14.80   | 9.09    | 13.11   | ACVR1   | activin A receptor type 1%2C transcript variant X1                                                    |
+| 10 | 506085 | 6.25       | 6.10       | 7.41       | 7.26       | 6.38       | 3.96       | 3.94      | 5.50    | 4.90    | 5.65    | 7.26    | 6.91    | 7.01    | ZDHHC16 | zinc finger DHHC-type containing 16%2C transcript variant X3                                          |
+| 11 | 509656 | 13.93      | 20.62      | 19.93      | 13.90      | 17.87      | 16.26      | 16.60     | 15.71   | 19.94   | 14.95   | 19.50   | 22.53   | 19.89   | PSKH1   | protein serine kinase H1                                                                              |
+| 12 | 512254 | 14.28      | 14.09      | 11.33      | 14.39      | 11.81      | 10.63      | 13.29     | 17.31   | 12.14   | 12.17   | 24.27   | 10.09   | 13.61   | MEF2C   | myocyte enhancer factor 2C%2C transcript variant X9                                                   |
+| 13 | 514997 | 8.78       | 9.24       | 15.24      | 7.71       | 8.89       | 10.06      | 7.33      | 5.61    | 11.24   | 7.86    | 5.13    | 8.99    | 8.30    | ZNHIT1  | zinc finger HIT-type containing 1                                                                     |
+| 14 | 534041 | 11.77      | 12.38      | 18.45      | 10.11      | 11.45      | 14.24      | 16.55     | 15.36   | 19.48   | 10.40   | 12.63   | 19.27   | 19.33   | MICAL2  | microtubule associated monooxygenase%2C calponin and LIM domain containing 2%2C transcript variant X1 |
+| 15 | 534069 | 34.58      | 37.30      | 23.76      | 38.46      | 29.75      | 29.27      | 27.73     | 48.82   | 27.82   | 39.82   | 32.13   | 33.18   | 33.27   | TGFB2   | transforming growth factor beta 2%2C transcript variant X3                                            |
+| 16 | 538690 | 11.47      | 14.06      | 21.67      | 11.65      | 19.24      | 5.79       | 17.01     | 9.73    | 20.46   | 12.49   | 15.66   | 15.03   | 15.97   | ID3     | inhibitor of DNA binding 3%2C HLH protein                                                             |
+| 17 | 539430 | 17.64      | 22.10      | 19.65      | 15.66      | 27.24      | 15.05      | 19.45     | 19.32   | 18.72   | 20.67   | 10.97   | 14.14   | 8.76    | OSR1    | odd-skipped related transciption factor 1                                                             |
+| 18 | 539696 | 21.82      | 21.32      | 20.85      | 21.81      | 26.57      | 23.31      | 24.24     | 20.41   | 28.90   | 22.22   | 27.81   | 21.44   | 22.11   | HEXIM1  | hexamethylene bisacetamide inducible 1                                                                |
+| 19 | 615492 | 6.96       | 6.87       | 5.74       | 8.43       | 5.27       | 5.14       | 8.09      | 4.82    | 9.53    | 8.39    | 4.00    | 7.62    | 5.34    | SMG9    | SMG9%2C nonsense mediated mRNA decay factor                                                           |
+| 20 | 786335 | 18.30      | 16.31      | 14.01      | 20.27      | 16.04      | 21.45      | 12.42     | 22.04   | 17.71   | 21.72   | 15.49   | 15.65   | 22.29   | GYS1    | glycogen synthase 1                                                                                   |
+
+$`GO:0045648 - positive regulation of erythrocyte differentiation`
+|   | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene    | product                                                                      |
+|---+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+---------+------------------------------------------------------------------------------|
+| 1 | 281598 | 10.76      | 11.18      | 8.62       | 7.48       | 9.25       | 11.68      | 13.72     | 15.69   | 9.27    | 10.06   | 19.39   | 8.22    | 13.77   | ACVR2A  | activin A receptor type 2A                                                   |
+| 2 | 281867 | 0.19       | 0.21       | 0.24       | 0.40       | 0.32       | 0.12       | 0.08      | 0.48    | 1.34    | 1.31    | 0.42    | 0.76    | 0.44    | INHBA   | inhibin subunit beta A%2C transcript variant X2                              |
+| 3 | 281871 | 0.81       | 0.34       | 0.86       | 2.72       | 1.52       | 45.47      | 1.10      | 2.38    | 1.74    | 3.06    | 6.41    | 2.00    | 1.71    | ISG15   | ISG15 ubiquitin-like modifier                                                |
+| 4 | 282376 | 48.07      | 59.84      | 50.23      | 25.17      | 42.69      | 45.93      | 34.06     | 42.61   | 76.01   | 26.83   | 55.64   | 49.25   | 46.47   | STAT5B  | signal transducer and activator of transcription 5B%2C transcript variant X1 |
+| 5 | 508541 | 93.26      | 91.58      | 81.78      | 102.95     | 83.50      | 101.80     | 89.40     | 103.78  | 102.56  | 115.26  | 98.36   | 99.88   | 124.89  | STAT3   | signal transducer and activator of transcription 3                           |
+| 6 | 538961 | 10.22      | 8.55       | 9.42       | 9.27       | 9.08       | 8.02       | 14.13     | 7.54    | 9.37    | 9.48    | 6.36    | 13.40   | 9.46    | ANKRD54 | ankyrin repeat domain 54                                                     |
+
+$`GO:0007507 - heart development`
+|    | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene    | product                                                                                               |
+|----+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+---------+-------------------------------------------------------------------------------------------------------|
+| 1  | 280939 | 16.94      | 14.04      | 20.79      | 11.52      | 16.07      | 14.08      | 15.52     | 13.27   | 21.43   | 11.18   | 29.90   | 18.78   | 16.79   | TEK     | TEK receptor tyrosine kinase                                                                          |
+| 2  | 281134 | 1.86       | 3.77       | 6.49       | 2.30       | 5.05       | 6.06       | 4.63      | 1.66    | 4.81    | 2.00    | 2.56    | 3.78    | 3.95    | ECE2    | endothelin converting enzyme 2%2C transcript variant 2a                                               |
+| 3  | 281193 | 7.28       | 10.21      | 6.89       | 10.15      | 5.37       | 7.58       | 6.03      | 10.50   | 7.01    | 12.63   | 8.67    | 5.40    | 6.48    | GJA1    | gap junction protein alpha 1                                                                          |
+| 4  | 281270 | 2.70       | 1.46       | 1.59       | 4.59       | 1.34       | 2.90       | 3.14      | 3.79    | 1.18    | 4.91    | 3.98    | 5.02    | 3.18    | HOPX    | HOP homeobox%2C transcript variant X3                                                                 |
+| 5  | 281733 | 5.07       | 3.13       | 3.26       | 8.76       | 4.79       | 7.57       | 6.95      | 9.17    | 4.72    | 5.98    | 5.80    | 4.56    | 9.08    | CXADR   | CXADR%2C Ig-like cell adhesion molecule%2C transcript variant X2                                      |
+| 6  | 282321 | 12.91      | 13.52      | 6.38       | 13.61      | 9.82       | 12.60      | 13.43     | 16.22   | 11.38   | 13.84   | 15.60   | 8.61    | 11.73   | PPP3R1  | protein phosphatase 3 regulatory subunit B%2C alpha                                                   |
+| 7  | 282382 | 28.25      | 33.40      | 32.41      | 22.80      | 36.04      | 41.62      | 34.63     | 29.67   | 37.23   | 25.04   | 30.00   | 26.82   | 34.54   | TGFBR1  | transforming growth factor beta receptor 1%2C transcript variant X2                                   |
+| 8  | 282682 | 96.48      | 118.55     | 104.65     | 58.00      | 113.50     | 115.97     | 96.90     | 82.98   | 118.92  | 63.92   | 101.75  | 145.76  | 110.85  | GRK2    | G protein-coupled receptor kinase 2%2C transcript variant X1                                          |
+| 9  | 338068 | 13.62      | 12.41      | 7.58       | 17.67      | 10.74      | 12.82      | 10.20     | 19.40   | 10.65   | 21.30   | 14.80   | 9.09    | 13.11   | ACVR1   | activin A receptor type 1%2C transcript variant X1                                                    |
+| 10 | 506085 | 6.25       | 6.10       | 7.41       | 7.26       | 6.38       | 3.96       | 3.94      | 5.50    | 4.90    | 5.65    | 7.26    | 6.91    | 7.01    | ZDHHC16 | zinc finger DHHC-type containing 16%2C transcript variant X3                                          |
+| 11 | 509656 | 13.93      | 20.62      | 19.93      | 13.90      | 17.87      | 16.26      | 16.60     | 15.71   | 19.94   | 14.95   | 19.50   | 22.53   | 19.89   | PSKH1   | protein serine kinase H1                                                                              |
+| 12 | 512254 | 14.28      | 14.09      | 11.33      | 14.39      | 11.81      | 10.63      | 13.29     | 17.31   | 12.14   | 12.17   | 24.27   | 10.09   | 13.61   | MEF2C   | myocyte enhancer factor 2C%2C transcript variant X9                                                   |
+| 13 | 514997 | 8.78       | 9.24       | 15.24      | 7.71       | 8.89       | 10.06      | 7.33      | 5.61    | 11.24   | 7.86    | 5.13    | 8.99    | 8.30    | ZNHIT1  | zinc finger HIT-type containing 1                                                                     |
+| 14 | 534041 | 11.77      | 12.38      | 18.45      | 10.11      | 11.45      | 14.24      | 16.55     | 15.36   | 19.48   | 10.40   | 12.63   | 19.27   | 19.33   | MICAL2  | microtubule associated monooxygenase%2C calponin and LIM domain containing 2%2C transcript variant X1 |
+| 15 | 534069 | 34.58      | 37.30      | 23.76      | 38.46      | 29.75      | 29.27      | 27.73     | 48.82   | 27.82   | 39.82   | 32.13   | 33.18   | 33.27   | TGFB2   | transforming growth factor beta 2%2C transcript variant X3                                            |
+| 16 | 538690 | 11.47      | 14.06      | 21.67      | 11.65      | 19.24      | 5.79       | 17.01     | 9.73    | 20.46   | 12.49   | 15.66   | 15.03   | 15.97   | ID3     | inhibitor of DNA binding 3%2C HLH protein                                                             |
+| 17 | 539430 | 17.64      | 22.10      | 19.65      | 15.66      | 27.24      | 15.05      | 19.45     | 19.32   | 18.72   | 20.67   | 10.97   | 14.14   | 8.76    | OSR1    | odd-skipped related transciption factor 1                                                             |
+| 18 | 539696 | 21.82      | 21.32      | 20.85      | 21.81      | 26.57      | 23.31      | 24.24     | 20.41   | 28.90   | 22.22   | 27.81   | 21.44   | 22.11   | HEXIM1  | hexamethylene bisacetamide inducible 1                                                                |
+| 19 | 615492 | 6.96       | 6.87       | 5.74       | 8.43       | 5.27       | 5.14       | 8.09      | 4.82    | 9.53    | 8.39    | 4.00    | 7.62    | 5.34    | SMG9    | SMG9%2C nonsense mediated mRNA decay factor                                                           |
+| 20 | 786335 | 18.30      | 16.31      | 14.01      | 20.27      | 16.04      | 21.45      | 12.42     | 22.04   | 17.71   | 21.72   | 15.49   | 15.65   | 22.29   | GYS1    | glycogen synthase 1                                                                                   |
+
+$`GO:0009409 - response to cold`
+|   | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene     | product                                                         |
+|---+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+----------+-----------------------------------------------------------------|
+| 1 | 281605 | 2.75       | 2.14       | 1.44       | 2.01       | 3.18       | 1.46       | 4.15      | 2.56    | 2.82    | 2.21    | 3.29    | 3.67    | 5.86    | ADRB2    | adrenoceptor beta 2                                             |
+| 2 | 281827 | 0.89       | 1.44       | 1.21       | 0.77       | 0.41       | 0.57       | 0.82      | 1.34    | 1.12    | 1.91    | 0.78    | 0.47    | 1.00    | HSPA2    | heat shock protein family A (Hsp70) member 2                    |
+| 3 | 281832 | 238.29     | 220.47     | 234.09     | 303.29     | 249.61     | 302.17     | 218.58    | 360.65  | 258.21  | 380.33  | 307.61  | 202.29  | 234.78  | HSP90AA1 | heat shock protein 90 alpha family class A member 1             |
+| 4 | 282130 | 45.14      | 47.64      | 56.03      | 49.58      | 55.77      | 40.32      | 46.71     | 36.15   | 64.45   | 47.91   | 49.00   | 69.18   | 53.79   | ACADVL   | acyl-CoA dehydrogenase very long chain%2C transcript variant X1 |
+| 5 | 505968 | 32.49      | 42.72      | 26.03      | 18.63      | 25.97      | 25.45      | 21.49     | 31.01   | 25.94   | 23.17   | 46.37   | 34.32   | 25.33   | ACADM    | acyl-CoA dehydrogenase medium chain%2C transcript variant X1    |
+| 6 | 523885 | 8.66       | 11.95      | 12.11      | 7.24       | 9.13       | 13.89      | 12.79     | 10.67   | 12.15   | 8.50    | 9.96    | 11.69   | 17.61   | TMEM135  | transmembrane protein 135%2C transcript variant X2              |
+
+$`GO:0001942 - hair follicle development`
+|   | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene    | product                                                              |
+|---+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+---------+----------------------------------------------------------------------|
+| 1 | 281867 | 0.19       | 0.21       | 0.24       | 0.40       | 0.32       | 0.12       | 0.08      | 0.48    | 1.34    | 1.31    | 0.42    | 0.76    | 0.44    | INHBA   | inhibin subunit beta A%2C transcript variant X2                      |
+| 2 | 505423 | 50.79      | 35.89      | 24.35      | 44.42      | 29.23      | 38.92      | 36.78     | 61.48   | 35.73   | 45.27   | 61.38   | 31.31   | 37.88   | LGR4    | leucine rich repeat containing G protein-coupled receptor 4          |
+| 3 | 534069 | 34.58      | 37.30      | 23.76      | 38.46      | 29.75      | 29.27      | 27.73     | 48.82   | 27.82   | 39.82   | 32.13   | 33.18   | 33.27   | TGFB2   | transforming growth factor beta 2%2C transcript variant X3           |
+| 4 | 535814 | 8.58       | 8.86       | 7.08       | 8.28       | 8.08       | 9.00       | 8.56      | 11.05   | 6.74    | 6.76    | 7.93    | 5.55    | 7.27    | ZDHHC21 | zinc finger DHHC-type containing 21%2C transcript variant X1         |
+| 5 | 616694 | 18.67      | 35.43      | 59.20      | 13.69      | 35.40      | 28.02      | 28.15     | 24.75   | 44.91   | 15.86   | 25.00   | 48.52   | 37.63   | NSDHL   | NAD(P) dependent steroid dehydrogenase-like%2C transcript variant X1 |
+
+$`GO:0097009 - energy homeostasis`
+|   | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene     | product                                                                                           |
+|---+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+----------+---------------------------------------------------------------------------------------------------|
+| 1 | 281052 | 1147.38    | 1848.11    | 2525.53    | 393.44     | 2177.52    | 2320.86    | 1873.41   | 1606.57 | 2062.02 | 603.62  | 3116.64 | 2527.42 | 2110.53 | CD36     | CD36 molecule%2C transcript variant 1                                                             |
+| 2 | 281370 | 312.28     | 445.53     | 347.16     | 276.91     | 365.57     | 392.35     | 359.19    | 309.06  | 341.74  | 260.43  | 434.19  | 471.35  | 395.46  | UBB      | ubiquitin B                                                                                       |
+| 3 | 282306 | 18.98      | 19.75      | 14.58      | 16.91      | 18.76      | 16.11      | 19.08     | 36.41   | 20.04   | 21.77   | 26.90   | 9.71    | 18.77   | PIK3CA   | phosphatidylinositol-4%2C5-bisphosphate 3-kinase catalytic subunit alpha%2C transcript variant X1 |
+| 4 | 338446 | 0.47       | 12.26      | 6.83       | 0.77       | 16.38      | 3.67       | 3.49      | 8.19    | 12.32   | 0.35    | 1.55    | 13.73   | 1.79    | PPARGC1A | PPARG coactivator 1 alpha                                                                         |
+| 5 | 506223 | 2.94       | 2.62       | 2.20       | 2.42       | 1.52       | 3.00       | 1.90      | 2.37    | 2.20    | 2.73    | 3.01    | 1.40    | 4.17    | OMA1     | OMA1 zinc metallopeptidase%2C transcript variant X5                                               |
+| 6 | 508541 | 93.26      | 91.58      | 81.78      | 102.95     | 83.50      | 101.80     | 89.40     | 103.78  | 102.56  | 115.26  | 98.36   | 99.88   | 124.89  | STAT3    | signal transducer and activator of transcription 3                                                |
+| 7 | 513852 | 0.73       | 0.00       | 0.69       | 0.54       | 0.45       | 0.65       | 1.07      | 0.47    | 0.89    | 1.08    | 1.05    | 1.37    | 1.17    | PM20D1   | peptidase M20 domain containing 1                                                                 |
+| 8 | 526652 | 15.14      | 12.79      | 10.45      | 17.93      | 13.73      | 14.27      | 14.97     | 18.36   | 11.11   | 15.96   | 16.19   | 12.94   | 13.07   | FLCN     | folliculin%2C transcript variant X1                                                               |
+
+$`GO:0051260 - protein homooligomerization`
+|    | GeneID    | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene     | product                                                                                |
+|----+-----------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+----------+----------------------------------------------------------------------------------------|
+| 1  | 100124502 | 4.22       | 3.19       | 3.50       | 4.47       | 5.48       | 3.89       | 4.59      | 5.38    | 3.73    | 3.62    | 3.09    | 2.93    | 2.70    | KCTD7    | potassium channel tetramerization domain containing 7                                  |
+| 2  | 100125308 | 15.63      | 15.99      | 20.72      | 9.89       | 17.84      | 16.69      | 15.11     | 11.64   | 13.71   | 9.22    | 10.18   | 20.56   | 20.99   | KCTD5    | potassium channel tetramerization domain containing 5%2C transcript variant X1         |
+| 3  | 281088    | 0.28       | 0.00       | 0.34       | 1.05       | 0.11       | 0.69       | 0.25      | 0.30    | 0.35    | 2.61    | 0.00    | 0.47    | 0.39    | COMP     | cartilage oligomeric matrix protein                                                    |
+| 4  | 281426    | 0.13       | 0.00       | 0.11       | 2.76       | 0.04       | 0.49       | 0.04      | 0.80    | 0.42    | 0.35    | 0.00    | 0.00    | 0.44    | PRND     | prion like protein doppel                                                              |
+| 5  | 281427    | 55.69      | 72.44      | 50.61      | 38.97      | 68.48      | 68.99      | 61.35     | 97.43   | 52.71   | 69.51   | 64.00   | 41.92   | 64.76   | PRNP     | prion protein%2C transcript variant 1                                                  |
+| 6  | 281465    | 4.51       | 3.14       | 3.61       | 5.10       | 4.54       | 4.10       | 5.33      | 1.94    | 3.09    | 3.95    | 3.48    | 3.60    | 3.13    | ROM1     | retinal outer segment membrane protein 1%2C transcript variant X1                      |
+| 7  | 281528    | 16.30      | 20.89      | 34.81      | 24.19      | 24.65      | 15.61      | 15.33     | 22.96   | 32.06   | 22.24   | 22.46   | 35.60   | 19.73   | TGM2     | transglutaminase 2                                                                     |
+| 8  | 281880    | 1.01       | 0.00       | 0.11       | 1.37       | 0.30       | 0.61       | 0.33      | 0.72    | 0.54    | 1.34    | 0.83    | 0.00    | 0.17    | KCNA4    | potassium voltage-gated channel subfamily A member 4                                   |
+| 9  | 282573    | 14.11      | 14.90      | 28.08      | 11.81      | 18.83      | 20.86      | 15.45     | 14.48   | 14.49   | 12.91   | 15.57   | 42.96   | 14.94   | KCNMA1   | potassium calcium-activated channel subfamily M alpha 1%2C transcript variant X8       |
+| 10 | 282846    | 1.04       | 2.31       | 1.26       | 3.10       | 2.07       | 1.24       | 1.13      | 1.73    | 0.66    | 2.51    | 0.58    | 3.02    | 1.62    | PYCARD   | PYD and CARD domain containing                                                         |
+| 11 | 317724    | 63.33      | 63.55      | 70.56      | 37.98      | 71.49      | 92.57      | 71.51     | 74.74   | 73.12   | 31.26   | 95.55   | 75.67   | 66.59   | USO1     | USO1 vesicle transport factor%2C transcript variant X1                                 |
+| 12 | 507899    | 26.41      | 24.50      | 29.39      | 23.86      | 26.68      | 25.08      | 19.47     | 28.84   | 23.62   | 26.38   | 28.02   | 22.87   | 26.28   | MICU1    | mitochondrial calcium uptake 1                                                         |
+| 13 | 507911    | 1.68       | 2.35       | 2.36       | 2.50       | 1.23       | 1.17       | 1.03      | 1.04    | 1.54    | 2.04    | 1.01    | 1.37    | 1.34    | KCTD13   | potassium channel tetramerization domain containing 13                                 |
+| 14 | 508343    | 4.62       | 6.25       | 4.73       | 3.32       | 7.64       | 5.42       | 4.70      | 3.41    | 6.28    | 4.76    | 5.51    | 4.61    | 3.16    | JMJD6    | arginine demethylase and lysine hydroxylase                                            |
+| 15 | 510679    | 17.90      | 22.06      | 19.37      | 23.63      | 21.54      | 16.50      | 22.30     | 11.86   | 17.23   | 17.69   | 17.39   | 22.01   | 17.24   | ALAD     | aminolevulinate dehydratase                                                            |
+| 16 | 511908    | 15.93      | 25.69      | 19.13      | 24.59      | 19.81      | 18.61      | 14.80     | 18.54   | 19.92   | 24.43   | 13.35   | 17.14   | 21.06   | EHD1     | EH domain containing 1                                                                 |
+| 17 | 512402    | 18.13      | 20.70      | 23.04      | 24.02      | 19.92      | 16.57      | 17.32     | 15.26   | 17.36   | 20.75   | 13.41   | 17.42   | 18.00   | SHKBP1   | SH3KBP1 binding protein 1%2C transcript variant X2                                     |
+| 18 | 512480    | 0.65       | 0.80       | 0.56       | 0.75       | 0.69       | 0.74       | 0.72      | 0.51    | 0.21    | 0.73    | 0.20    | 0.17    | 0.86    | NLRC4    | NLR family CARD domain containing 4%2C transcript variant X2                           |
+| 19 | 512578    | 5.75       | 2.71       | 3.42       | 4.34       | 4.83       | 2.87       | 6.62      | 3.37    | 6.29    | 4.69    | 2.73    | 2.21    | 1.86    | KCTD15   | potassium channel tetramerization domain containing 15%2C transcript variant X1        |
+| 20 | 513324    | 40.08      | 62.41      | 84.54      | 30.66      | 62.29      | 50.53      | 54.70     | 33.16   | 67.09   | 31.07   | 43.23   | 82.02   | 52.01   | LETM1    | leucine zipper and EF-hand containing transmembrane protein 1%2C transcript variant X1 |
+| 21 | 518384    | 3.40       | 4.19       | 1.60       | 3.28       | 2.12       | 2.74       | 2.35      | 3.37    | 1.60    | 2.66    | 2.12    | 2.59    | 1.81    | KCND1    | potassium voltage-gated channel subfamily D member 1%2C transcript variant X2          |
+| 22 | 520173    | 17.05      | 19.64      | 19.47      | 14.58      | 19.26      | 17.41      | 15.11     | 13.18   | 18.26   | 10.22   | 14.22   | 22.61   | 19.67   | TMEM120A | transmembrane protein 120A                                                             |
+| 23 | 521442    | 10.72      | 12.68      | 19.76      | 8.79       | 15.49      | 16.42      | 14.38     | 11.79   | 13.19   | 9.98    | 11.52   | 16.75   | 12.43   | SPAST    | spastin%2C transcript variant X2                                                       |
+| 24 | 521998    | 10.39      | 12.90      | 13.57      | 7.72       | 14.67      | 12.71      | 12.72     | 9.29    | 12.36   | 9.28    | 10.72   | 18.29   | 11.38   | ZNF746   | zinc finger protein 746%2C transcript variant X3                                       |
+| 25 | 535424    | 0.26       | 0.14       | 0.06       | 0.39       | 0.56       | 0.73       | 0.12      | 0.83    | 0.04    | 0.26    | 0.49    | 0.31    | 0.00    | ATL1     | atlastin GTPase 1%2C transcript variant X2                                             |
+| 26 | 539167    | 2.85       | 3.08       | 2.99       | 5.19       | 2.20       | 3.16       | 2.83      | 3.56    | 3.20    | 4.62    | 3.26    | 2.15    | 3.04    | KCTD11   | potassium channel tetramerization domain containing 11                                 |
+| 27 | 613694    | 4.89       | 4.27       | 1.81       | 5.53       | 1.94       | 3.31       | 5.05      | 5.82    | 3.13    | 3.47    | 5.60    | 3.00    | 4.36    | KCTD18   | potassium channel tetramerization domain containing 18%2C transcript variant X1        |
+| 28 | 783855    | 9.24       | 8.29       | 10.66      | 5.68       | 8.04       | 8.83       | 10.17     | 9.28    | 7.10    | 5.45    | 10.23   | 8.37    | 8.83    | TIFA     | TRAF interacting protein with forkhead associated domain%2C transcript variant X1      |
+| 29 | 784587    | 11.86      | 13.63      | 10.47      | 22.04      | 11.13      | 12.58      | 13.57     | 22.65   | 8.88    | 23.00   | 16.32   | 7.72    | 12.33   | KCTD1    | potassium channel tetramerization domain containing 1%2C transcript variant X3         |
+
+$`GO:0140668 - positive regulation of oxytocin production`
+|   | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene | product                                      |
+|---+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+------+----------------------------------------------|
+| 1 | 281416 | 4.58       | 5.26       | 3.22       | 2.43       | 4.83       | 3.59       | 3.51      | 1.86    | 2.83    | 0.85    | 1.18    | 4.44    | 2.46    | POMC | proopiomelanocortin%2C transcript variant X1 |
+
+$`GO:0060397 - growth hormone receptor signaling pathway via JAK-STAT`
+|   | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene   | product                                                                      |
+|---+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+--------+------------------------------------------------------------------------------|
+| 1 | 282376 | 48.07      | 59.84      | 50.23      | 25.17      | 42.69      | 45.93      | 34.06     | 42.61   | 76.01   | 26.83   | 55.64   | 49.25   | 46.47   | STAT5B | signal transducer and activator of transcription 5B%2C transcript variant X1 |
+| 2 | 508541 | 93.26      | 91.58      | 81.78      | 102.95     | 83.50      | 101.80     | 89.40     | 103.78  | 102.56  | 115.26  | 98.36   | 99.88   | 124.89  | STAT3  | signal transducer and activator of transcription 3                           |
+
+$`GO:0006816 - calcium ion transport`
+|    | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene   | product                                                                   |
+|----+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+--------+---------------------------------------------------------------------------|
+| 1  | 281040 | 134.56     | 171.76     | 163.81     | 94.97      | 166.61     | 100.67     | 109.04    | 165.08  | 171.85  | 135.34  | 243.58  | 165.44  | 145.98  | CAV1   | caveolin 1%2C transcript variant X1                                       |
+| 2  | 281879 | 13.99      | 7.12       | 7.20       | 13.15      | 5.92       | 4.15       | 10.65     | 8.38    | 10.59   | 15.81   | 8.20    | 6.84    | 8.22    | ITPR3  | inositol 1%2C4%2C5-trisphosphate receptor type 3%2C transcript variant X1 |
+| 3  | 282178 | 0.63       | 0.45       | 0.40       | 0.21       | 0.22       | 0.00       | 1.03      | 0.52    | 0.27    | 0.39    | 0.26    | 1.17    | 1.25    | CHRNA7 | cholinergic receptor%2C nicotinic%2C alpha 7                              |
+| 4  | 282196 | 22.30      | 12.54      | 8.41       | 35.64      | 12.81      | 10.16      | 14.50     | 16.71   | 10.70   | 21.22   | 11.06   | 12.95   | 14.31   | CORO1A | coronin 1A%2C transcript variant X2                                       |
+| 5  | 282325 | 7.09       | 5.41       | 3.39       | 12.47      | 3.55       | 9.06       | 7.05      | 10.07   | 2.26    | 6.57    | 6.20    | 3.93    | 6.04    | PRKCB  | protein kinase C beta%2C transcript variant X1                            |
+| 6  | 327663 | 59.22      | 48.03      | 55.32      | 41.95      | 55.45      | 50.47      | 51.17     | 57.10   | 56.41   | 44.78   | 57.22   | 50.56   | 63.71   | ATP2C1 | ATPase secretory pathway Ca2+ transporting 1%2C transcript variant X3     |
+| 7  | 327685 | 22.98      | 28.36      | 28.64      | 46.71      | 25.36      | 21.45      | 25.80     | 31.97   | 32.45   | 43.43   | 21.94   | 22.98   | 23.74   | ANXA6  | annexin A6%2C transcript variant X1                                       |
+| 8  | 337925 | 13.37      | 15.87      | 24.54      | 8.52       | 30.12      | 28.53      | 23.02     | 18.03   | 27.59   | 12.58   | 27.47   | 27.74   | 26.95   | SLC8A1 | solute carrier family 8 member A1%2C transcript variant X3                |
+| 9  | 515461 | 121.43     | 129.84     | 163.84     | 85.40      | 145.33     | 177.80     | 113.42    | 100.39  | 131.44  | 89.99   | 74.01   | 110.99  | 113.95  | SARAF  | store-operated calcium entry associated regulatory factor                 |
+| 10 | 540892 | 16.55      | 17.64      | 18.58      | 15.98      | 18.78      | 26.54      | 18.44     | 20.31   | 20.44   | 15.35   | 22.42   | 24.04   | 26.10   | DNM1L  | dynamin 1 like%2C transcript variant X7                                   |
+
+$`GO:0050830 - defense response to Gram-positive bacterium`
+|    | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene    | product                                                                      |
+|----+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+---------+------------------------------------------------------------------------------|
+| 1  | 281249 | 1.21       | 1.67       | 0.24       | 4.56       | 0.08       | 1.88       | 1.14      | 1.99    | 0.23    | 1.49    | 0.79    | 0.70    | 0.22    | IL18    | interleukin 18%2C transcript variant X1                                      |
+| 2  | 338039 | 17.13      | 16.35      | 13.41      | 21.30      | 12.37      | 21.55      | 13.42     | 15.23   | 11.30   | 13.38   | 14.60   | 10.37   | 20.35   | CASP4   | caspase 4%2C apoptosis-related cysteine peptidase%2C transcript variant X1   |
+| 3  | 444881 | 33.75      | 27.58      | 56.08      | 21.93      | 49.11      | 46.53      | 27.28     | 21.91   | 35.02   | 21.10   | 32.08   | 37.67   | 48.47   | MYD88   | myeloid differentiation primary response 88%2C transcript variant X2         |
+| 4  | 506206 | 1.06       | 0.28       | 0.26       | 1.65       | 0.69       | 0.88       | 0.83      | 1.33    | 0.32    | 0.88    | 0.71    | 0.00    | 0.00    | MR1     | major histocompatibility complex%2C class I-related%2C transcript variant X3 |
+| 5  | 506509 | 22.63      | 22.54      | 27.20      | 19.75      | 18.56      | 32.85      | 26.56     | 23.95   | 30.55   | 18.16   | 28.05   | 22.37   | 23.35   | SEH1L   | SEH1 like nucleoporin%2C transcript variant X1                               |
+| 6  | 508990 | 12.30      | 17.91      | 22.01      | 26.94      | 16.62      | 10.93      | 19.07     | 9.63    | 22.20   | 19.54   | 9.49    | 14.59   | 14.10   | RARRES2 | retinoic acid receptor responder 2%2C transcript variant X2                  |
+| 7  | 534407 | 14.05      | 12.36      | 13.89      | 12.36      | 14.44      | 16.99      | 15.96     | 16.17   | 14.67   | 10.10   | 17.19   | 13.67   | 14.85   | RIPK2   | receptor interacting serine/threonine kinase 2%2C transcript variant X2      |
+| 8  | 539997 | 14.15      | 14.82      | 9.13       | 38.25      | 17.06      | 14.68      | 8.85      | 14.57   | 11.54   | 24.29   | 10.50   | 14.56   | 18.21   | MPEG1   | macrophage expressed 1                                                       |
+| 9  | 540444 | 16.31      | 9.95       | 9.77       | 21.00      | 13.12      | 10.93      | 13.01     | 13.09   | 11.32   | 19.31   | 17.39   | 12.11   | 14.85   | HMGB2   | high mobility group box 2                                                    |
+| 10 | 618530 | 10.73      | 9.80       | 15.03      | 9.68       | 15.02      | 9.21       | 9.60      | 5.92    | 19.50   | 10.74   | 7.70    | 14.11   | 10.02   | ROMO1   | reactive oxygen species modulator 1%2C transcript variant X1                 |
+| 11 | 767908 | 155.49     | 150.63     | 143.32     | 142.40     | 168.43     | 135.96     | 175.34    | 112.17  | 164.50  | 124.46  | 101.98  | 144.32  | 135.06  | RPL39   | ribosomal protein L39                                                        |
+
+$`GO:0003085 - negative regulation of systemic arterial blood pressure`
+|   | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene    | product                                          |
+|---+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+---------+--------------------------------------------------|
+| 1 | 527572 | 3.64       | 1.48       | 4.37       | 1.28       | 4.45       | 1.66       | 0.53      | 0.15    | 0.69    | 1.68    | 0.34    | 1.02    | 1.86    | GPR37L1 | G protein-coupled receptor 37 like 1             |
+| 2 | 532120 | 23.25      | 29.76      | 17.70      | 16.74      | 21.53      | 25.34      | 24.55     | 23.78   | 23.18   | 14.61   | 19.48   | 23.65   | 26.04   | BBS4    | Bardet-Biedl syndrome 4%2C transcript variant X4 |
+
+$`GO:0042310 - vasoconstriction`
+|   | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene | product                             |
+|---+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+------+-------------------------------------|
+| 1 | 281040 | 134.56     | 171.76     | 163.81     | 94.97      | 166.61     | 100.67     | 109.04    | 165.08  | 171.85  | 135.34  | 243.58  | 165.44  | 145.98  | CAV1 | caveolin 1%2C transcript variant X1 |
+| 2 | 527114 | 0.54       | 0.70       | 1.78       | 0.45       | 0.75       | 3.19       | 3.13      | 0.92    | 5.91    | 1.15    | 0.89    | 2.93    | 1.69    | AGT  | angiotensinogen                     |
+
+$`GO:0051302 - regulation of cell division`
+|   | GeneID | SLICK_2041 | SLICK_2128 | SLICK_2129 | SLICK_2171 | SLICK_2202 | SLICK_2287 | SLICK_466 | WT_2058 | WT_2068 | WT_2089 | WT_2116 | WT_2226 | WT_2273 | gene   | product                                             |
+|---+--------+------------+------------+------------+------------+------------+------------+-----------+---------+---------+---------+---------+---------+---------+--------+-----------------------------------------------------|
+| 1 | 327682 | 579.77     | 592.48     | 493.33     | 547.93     | 527.13     | 665.62     | 540.97    | 639.48  | 438.55  | 618.07  | 652.12  | 389.17  | 689.11  | RACK1  | receptor for activated C kinase 1                   |
+| 2 | 505401 | 4.89       | 4.92       | 6.94       | 8.65       | 5.41       | 6.07       | 7.13      | 7.11    | 6.01    | 7.92    | 6.32    | 7.95    | 6.10    | TADA2A | transcriptional adaptor 2A%2C transcript variant X3 |
+| 3 | 507401 | 1.76       | 0.85       | 1.55       | 1.27       | 0.79       | 1.72       | 0.38      | 0.57    | 0.12    | 0.56    | 0.29    | 1.12    | 0.85    | OOEP   | oocyte expressed protein                            |
+| 4 | 510124 | 6.59       | 11.27      | 8.64       | 4.12       | 10.79      | 6.44       | 7.65      | 5.62    | 8.57    | 4.87    | 10.32   | 7.86    | 5.23    | EFHC1  | EF-hand domain containing 1                         |
+| 5 | 510141 | 17.39      | 16.40      | 23.40      | 17.63      | 17.32      | 14.15      | 14.69     | 11.56   | 18.94   | 15.08   | 12.81   | 18.76   | 20.63   | CIB1   | calcium and integrin binding 1                      |
+| 6 | 510184 | 21.50      | 18.12      | 18.12      | 29.04      | 22.47      | 21.98      | 23.95     | 20.03   | 18.79   | 26.09   | 17.26   | 16.10   | 16.25   | TADA3  | transcriptional adaptor 3%2C transcript variant X1  |
 
 ** Session Info
 #+begin_src R :session bovine.rm :results output verbatim
