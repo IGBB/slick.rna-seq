@@ -2270,7 +2270,7 @@ loaded via a namespace (and not attached):
 
 #  LocalWords:  transcriptome
 
-* Meta
+* COMMENT Meta - ALL
 
 #+header: :results output file graphics :file meta.corr.png
 #+header: :width 11 :height 11 :units in :res 150
@@ -2333,8 +2333,6 @@ plot <- ggplot(cor.data, aes(Variable, ID,
 
 plot_grid(plot, get_legend(plot + theme(legend.position = 'bottom')), nrow = 2, rel_heights = c(1, 0.1))
 
-#corrplot(cor(metab, phys, method = "spearman"))
-
 #+end_src
 
 #+RESULTS:
@@ -2387,3 +2385,121 @@ mutate(cor.data, value = sprintf("%.03f (%.03f)", r, P)) %>%
 | 33 | HMDB0014447 | -0.234 (0.421) | 0.402 (0.154)  | 0.679 (0.008)  | -0.596 (0.025) | -0.648 (0.012) |
 | 34 | HMDB0000929 | -0.157 (0.593) | 0.473 (0.088)  | 0.578 (0.030)  | -0.407 (0.149) | -0.275 (0.342) |
 | 35 | HMDB0029090 | 0.452 (0.105)  | -0.182 (0.533) | -0.301 (0.296) | 0.640 (0.014)  | 0.398 (0.159)  |
+
+
+
+* Meta - Reduced
+
+#+header: :results output file graphics :file meta.reduced.corr.png
+#+header: :width 11 :height 11 :units in :res 150
+#+begin_src R :session metab.reduced
+library(Hmisc)
+library(tidyverse)
+library(cowplot)
+
+metabolites <-
+  read.delim("metabolomics.reduced.tbl", nrows = 1) %>% select(-c(1:8)) %>% c %>% unlist
+
+data <- read.delim("metabolomics.reduced.tbl", skip=1) %>%
+  rename(setNames(make.names(metabolites), names(metabolites)),
+         Sample="Sample..")
+
+meta.data <- data[,c(1:3)]
+phys <- data %>%
+  select(1, c(4:8)) %>%
+  column_to_rownames("Sample") %>%
+  mutate_all(as.numeric)
+metab <- data %>%
+  select("Sample", names(metabolites)) %>%
+  column_to_rownames("Sample") %>%
+  mutate_all(as.numeric)
+
+cor.data <- rcorr(as.matrix(metab), as.matrix(phys), type="spearman") %>%
+  lapply('[', names(metabolites), names(phys)) %>%
+  lapply(as.data.frame) %>%
+  lapply(rownames_to_column, "ID") %>%
+  bind_rows(.id='Type') %>%
+  gather( "Variable", "val", -ID, -Type ) %>%
+  spread(Type, val) %>%
+  mutate(color = fct_recode(cut(P, breaks=c(-Inf, 0.01, 0.05 , Inf))),
+         Variable = factor(Variable, levels=c("MY", "VT", "RI", "Diameter", "Total_MBF")),
+         ID = factor(ID, levels=names(sort(metabolites))),
+         set = (as.numeric(ID)+1) %% 2)
+
+levels(cor.data$color) <- c("<=0.01", "0.01<x<=0.05", ">0.05")
+
+metabolite.labels <- setNames(sprintf("%s\n%s", names(sort(metabolites)), sort(metabolites)), names(sort(metabolites)))
+plot <- ggplot(cor.data, aes(Variable, ID,
+                     size=abs(r), alpha=abs(r), fill=r,
+                     color=color)) +
+  geom_point(shape=21, stroke=2) +
+  scale_x_discrete(position = 'top') +
+  scale_y_discrete(limits=rev, labels=metabolite.labels) +
+  scale_alpha_continuous(guide='none', range=c(1,1), limits=c(0,1)) +
+  scale_size_continuous(guide='none', range=c(1,15), limits=c(0,1)) +
+  scale_fill_distiller( palette = 'RdBu', direction = 1,
+                        guide = guide_colorbar(barwidth=25), name='Correlation', limits=c(-1,1)) +
+  scale_color_manual(values=c("#D4A10D", "#848284", 'white'), name="Significance") +
+  facet_wrap(set~., scales="free", ncol=2) +
+  theme_minimal() +
+  theme(axis.title = element_blank(),
+        panel.grid = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        legend.position = 'none',
+        legend.box="vertical")
+
+plot_grid(plot, get_legend(plot + theme(legend.position = 'bottom')), nrow = 2, rel_heights = c(1, 0.1))
+
+#+end_src
+
+#+RESULTS:
+[[file:meta.reduced.corr.png]]
+
+#+begin_src R :session metab.reduced :results output table
+options(asciiType = "org")
+mutate(cor.data, value = sprintf("%.03f (%.03f)", r, P)) %>%
+  select(ID, Variable, value) %>%
+  spread("Variable", "value") %>%
+  mutate(ID = factor(ID, levels=names(sort(metabolites)))) %>%
+  ascii::ascii()
+
+#+end_src
+
+#+RESULTS:
+|    | ID          | MY             | VT             | RI             | Diameter       | Total_MBF      |
+|----+-------------+----------------+----------------+----------------+----------------+----------------|
+|  1 | HMDB0244503 | -0.617 (0.019) | 0.538 (0.047)  | 0.503 (0.067)  | -0.253 (0.383) | -0.433 (0.122) |
+|  2 | HMDB0003175 | 0.582 (0.029)  | -0.358 (0.208) | -0.090 (0.759) | 0.451 (0.106)  | 0.262 (0.366)  |
+|  3 | HMDB0006245 | -0.337 (0.238) | 0.174 (0.553)  | 0.604 (0.022)  | -0.613 (0.020) | -0.574 (0.032) |
+|  4 | HMDB0244869 | 0.710 (0.004)  | 0.020 (0.946)  | -0.477 (0.085) | 0.380 (0.180)  | 0.530 (0.051)  |
+|  5 | HMDB0245244 | -0.412 (0.143) | 0.266 (0.358)  | 0.705 (0.005)  | -0.495 (0.072) | -0.569 (0.034) |
+|  6 | HMDB0037544 | -0.710 (0.004) | 0.332 (0.246)  | 0.319 (0.267)  | -0.622 (0.018) | -0.547 (0.043) |
+|  7 | HMDB0000528 | 0.822 (0.000)  | -0.196 (0.503) | -0.204 (0.483) | 0.125 (0.670)  | 0.332 (0.246)  |
+|  8 | HMDB0062738 | 0.406 (0.150)  | -0.138 (0.637) | -0.565 (0.035) | 0.516 (0.059)  | 0.785 (0.001)  |
+|  9 | HMDB0040551 | 0.157 (0.593)  | -0.235 (0.418) | -0.644 (0.013) | 0.569 (0.034)  | 0.543 (0.045)  |
+| 10 | HMDB0304536 | -0.348 (0.222) | 0.121 (0.681)  | 0.407 (0.149)  | -0.516 (0.059) | -0.640 (0.014) |
+| 11 | HMDB0002212 | -0.774 (0.001) | 0.059 (0.840)  | 0.415 (0.140)  | -0.420 (0.135) | -0.451 (0.106) |
+| 12 | HMDB0000063 | -0.042 (0.887) | 0.275 (0.342)  | 0.015 (0.958)  | -0.398 (0.159) | -0.538 (0.047) |
+| 13 | HMDB0242441 | 0.077 (0.793)  | -0.732 (0.003) | -0.380 (0.180) | 0.385 (0.175)  | 0.182 (0.533)  |
+| 14 | HMDB0001051 | -0.329 (0.251) | 0.284 (0.326)  | 0.697 (0.006)  | -0.411 (0.144) | -0.569 (0.034) |
+| 15 | HMDB0000131 | -0.013 (0.964) | 0.666 (0.009)  | 0.323 (0.260)  | -0.503 (0.067) | -0.266 (0.358) |
+| 16 | HMDB0002345 | -0.664 (0.010) | 0.459 (0.098)  | 0.495 (0.072)  | -0.354 (0.215) | -0.525 (0.054) |
+| 17 | HMDB0010381 | 0.545 (0.044)  | -0.160 (0.584) | -0.099 (0.737) | 0.301 (0.296)  | 0.442 (0.114)  |
+| 18 | HMDB0010390 | 0.404 (0.152)  | -0.688 (0.007) | -0.530 (0.051) | 0.376 (0.185)  | 0.349 (0.221)  |
+| 19 | HMDB0000156 | -0.236 (0.417) | 0.367 (0.197)  | 0.675 (0.008)  | -0.565 (0.035) | -0.569 (0.034) |
+| 20 | HMDB0255110 | -0.659 (0.010) | 0.407 (0.149)  | 0.600 (0.023)  | -0.468 (0.091) | -0.508 (0.064) |
+| 21 | HMDB0062342 | 0.181 (0.536)  | -0.710 (0.004) | -0.385 (0.175) | 0.178 (0.543)  | 0.178 (0.543)  |
+| 22 | HMDB0002088 | -0.670 (0.009) | 0.420 (0.135)  | 0.516 (0.059)  | -0.495 (0.072) | -0.530 (0.051) |
+| 23 | HMDB0013648 | -0.461 (0.097) | 0.341 (0.233)  | 0.459 (0.098)  | -0.675 (0.008) | -0.670 (0.009) |
+| 24 | HMDB0002100 | -0.723 (0.003) | 0.376 (0.185)  | 0.376 (0.185)  | -0.477 (0.085) | -0.451 (0.106) |
+| 25 | HMDB0029006 | 0.549 (0.042)  | -0.209 (0.474) | -0.468 (0.091) | 0.578 (0.030)  | 0.530 (0.051)  |
+| 26 | HMDB0002752 | -0.364 (0.201) | 0.037 (0.899)  | 0.200 (0.493)  | -0.626 (0.017) | -0.596 (0.025) |
+| 27 | HMDB0001403 | 0.598 (0.024)  | -0.398 (0.159) | -0.182 (0.533) | 0.301 (0.296)  | 0.262 (0.366)  |
+| 28 | HMDB0001220 | 0.426 (0.129)  | -0.327 (0.253) | 0.169 (0.563)  | 0.600 (0.023)  | 0.222 (0.446)  |
+| 29 | HMDB0002664 | 0.659 (0.010)  | -0.108 (0.714) | -0.073 (0.805) | 0.481 (0.081)  | 0.415 (0.140)  |
+| 30 | HMDB0030569 | 0.289 (0.317)  | -0.495 (0.072) | -0.618 (0.019) | 0.112 (0.703)  | 0.244 (0.401)  |
+| 31 | HMDB0003252 | 0.602 (0.023)  | -0.310 (0.281) | -0.169 (0.563) | 0.297 (0.303)  | 0.385 (0.175)  |
+| 32 | HMDB0014447 | -0.234 (0.421) | 0.402 (0.154)  | 0.679 (0.008)  | -0.596 (0.025) | -0.648 (0.012) |
+| 33 | HMDB0000929 | -0.157 (0.593) | 0.473 (0.088)  | 0.578 (0.030)  | -0.407 (0.149) | -0.275 (0.342) |
+| 34 | HMDB0029090 | 0.452 (0.105)  | -0.182 (0.533) | -0.301 (0.296) | 0.640 (0.014)  | 0.398 (0.159)  |
